@@ -28,6 +28,7 @@ Every strategy family must produce structured trade ideas with instrument, direc
 - Keep AI as a reviewer/explainer.
 - Start with option buying and breakout/momentum examples because the downside is naturally capped to premium paid.
 - Configuration helper commands are in place for `.env` creation and masked settings review.
+- Daily pre-market safety checklist is in place.
 
 ## Phase 2: Angel SmartAPI Market Data
 
@@ -125,6 +126,7 @@ Every strategy family must produce structured trade ideas with instrument, direc
 - Add trade journal summarizer.
 - Add manual approval before live orders.
 - Require agent objections to be journaled even when a deterministic risk check approves a trade.
+- Use `premarket` before every session to check mode, live guard, instrument cache, risk state, and strategy registry.
 
 ## Phase 5: Controlled Live Trading
 

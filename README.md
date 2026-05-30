@@ -198,6 +198,14 @@ Check the effective settings with secrets masked:
 python -m nse_agentic_trader.app config show
 ```
 
+Run the daily pre-market checklist:
+
+```powershell
+python -m nse_agentic_trader.app premarket
+```
+
+Use this before paper trading to confirm mode safety, live-order guard, instrument cache, risk state, journal path, and registered strategies.
+
 ## Suggested Build Path
 
 1. Keep `TRADING_MODE=paper`.

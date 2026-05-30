@@ -7,6 +7,7 @@ from pathlib import Path
 from nse_agentic_trader.agent import TradeReviewer
 from nse_agentic_trader.broker import PaperBroker
 from nse_agentic_trader.broker.angel import AngelSmartApiBroker
+from nse_agentic_trader.checklist import build_premarket_checklist, checklist_lines
 from nse_agentic_trader.config import load_settings
 from nse_agentic_trader.config_tools import init_env_file, settings_lines
 from nse_agentic_trader.execution import build_angel_order_params, validate_order_request
@@ -386,6 +387,11 @@ def config_init(args) -> None:
     print(init_env_file(overwrite=args.overwrite))
 
 
+def run_premarket() -> None:
+    for line in checklist_lines(build_premarket_checklist(load_settings())):
+        print(line)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="NSE agentic trader starter")
     subparsers = parser.add_subparsers(dest="command")
@@ -442,6 +448,8 @@ def main() -> None:
     config_init_parser = config_subparsers.add_parser("init", help="Create .env from .env.example")
     config_init_parser.add_argument("--overwrite", action="store_true")
 
+    subparsers.add_parser("premarket", help="Run daily pre-market safety checklist")
+
     _add_run_args(parser)
     args = parser.parse_args()
     if args.command in (None, "run"):
@@ -488,6 +496,9 @@ def main() -> None:
         return
     if args.command == "config" and args.config_command == "init":
         config_init(args)
+        return
+    if args.command == "premarket":
+        run_premarket()
         return
     parser.print_help()
 
