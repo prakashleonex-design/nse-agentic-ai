@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import csv
 from collections.abc import Iterable
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Protocol
 
@@ -21,6 +21,12 @@ class CsvCandleProvider:
         self.symbol = symbol
 
     def candles(self) -> Iterable[MarketSnapshot]:
+        if not self.path.exists():
+            raise FileNotFoundError(
+                f"Candle CSV not found: {self.path}. "
+                "Create the file, pass an absolute path, or run: "
+                f"python -m nse_agentic_trader.app data sample-csv --path {self.path} --symbol {self.symbol}"
+            )
         with self.path.open("r", newline="", encoding="utf-8-sig") as handle:
             reader = csv.DictReader(handle)
             for row in reader:
@@ -33,6 +39,34 @@ class CsvCandleProvider:
                     close=float(row["close"]),
                     volume=int(float(row.get("volume") or 0)),
                 )
+
+
+def write_sample_candle_csv(path: Path, symbol: str, bars: int = 120) -> Path:
+    if bars <= 0:
+        raise ValueError("--bars must be greater than 0")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    start = datetime.now().replace(hour=9, minute=15, second=0, microsecond=0)
+    price = 22500.0
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=["timestamp", "symbol", "open", "high", "low", "close", "volume"])
+        writer.writeheader()
+        for index in range(bars):
+            drift = 3.2 if index > 15 else 0.45
+            open_price = price
+            close = price + drift
+            writer.writerow(
+                {
+                    "timestamp": (start + timedelta(minutes=index)).strftime("%Y-%m-%d %H:%M"),
+                    "symbol": symbol,
+                    "open": round(open_price, 2),
+                    "high": round(max(open_price, close) + 2, 2),
+                    "low": round(min(open_price, close) - 2, 2),
+                    "close": round(close, 2),
+                    "volume": 1000 + index,
+                }
+            )
+            price = close
+    return path
 
 
 class AngelHistoricalCandleProvider:

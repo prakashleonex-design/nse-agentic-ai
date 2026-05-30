@@ -58,7 +58,10 @@ def load_bars(
     if data_source == "csv":
         if csv_path is None:
             raise SystemExit("--csv-path is required when --data-source csv")
-        bars = list(CsvCandleProvider(csv_path, symbol).candles())
+        try:
+            bars = list(CsvCandleProvider(csv_path, symbol).candles())
+        except FileNotFoundError as exc:
+            raise SystemExit(str(exc)) from exc
         _raise_if_invalid(bars)
         return bars
     if data_source == "angel":

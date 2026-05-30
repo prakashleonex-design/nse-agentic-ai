@@ -80,6 +80,12 @@ CSV columns:
 timestamp,symbol,open,high,low,close,volume
 ```
 
+Create a local sample CSV for testing the workflow:
+
+```powershell
+python -m nse_agentic_trader.app data sample-csv --path .\data\nifty_1m.csv --symbol NIFTY --bars 120
+```
+
 Validate candle data before running a strategy:
 
 ```powershell

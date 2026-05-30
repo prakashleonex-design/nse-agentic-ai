@@ -15,7 +15,7 @@ from nse_agentic_trader.execution import build_angel_order_params, validate_orde
 from nse_agentic_trader.filters import AvoidTradeFilterEngine, apply_filter_block
 from nse_agentic_trader.instruments import AngelInstrumentMaster, OptionQuery, ensure_instrument_master, instrument_master_info
 from nse_agentic_trader.journal import Journal
-from nse_agentic_trader.market_data import AngelHistoricalCandleProvider, CsvCandleProvider
+from nse_agentic_trader.market_data import AngelHistoricalCandleProvider, CsvCandleProvider, write_sample_candle_csv
 from nse_agentic_trader.models import MarketSnapshot, OptionContract, OptionType, OrderRequest, RiskDecision, Side, SignalAction, TradeSignal
 from nse_agentic_trader.postmarket import build_postmarket_summary
 from nse_agentic_trader.risk import RiskManager
@@ -217,7 +217,10 @@ def _load_bars(
     if data_source == "csv":
         if csv_path is None:
             raise SystemExit("--csv-path is required when --data-source csv")
-        bars = list(CsvCandleProvider(csv_path, symbol).candles())
+        try:
+            bars = list(CsvCandleProvider(csv_path, symbol).candles())
+        except FileNotFoundError as exc:
+            raise SystemExit(str(exc)) from exc
         _raise_if_invalid_candles(bars)
         return bars
     if data_source == "angel":
@@ -440,6 +443,14 @@ def validate_data(args) -> None:
         print(line)
 
 
+def write_sample_csv(args) -> None:
+    try:
+        path = write_sample_candle_csv(args.path, args.symbol, args.bars)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+    print(f"Wrote sample CSV: {path}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="NSE agentic trader starter")
     subparsers = parser.add_subparsers(dest="command")
@@ -508,6 +519,10 @@ def main() -> None:
     validate_data_parser = data_subparsers.add_parser("validate", help="Validate candle data quality")
     _add_run_args(validate_data_parser)
     validate_data_parser.add_argument("--min-bars", type=int, default=1)
+    sample_csv_parser = data_subparsers.add_parser("sample-csv", help="Write a small sample candle CSV for local testing")
+    sample_csv_parser.add_argument("--symbol", default="NIFTY")
+    sample_csv_parser.add_argument("--path", "--output", dest="path", type=Path, default=Path("data/nifty_1m.csv"))
+    sample_csv_parser.add_argument("--bars", type=int, default=120)
 
     _add_run_args(parser)
     args = parser.parse_args()
@@ -564,6 +579,9 @@ def main() -> None:
         return
     if args.command == "data" and args.data_command == "validate":
         validate_data(args)
+        return
+    if args.command == "data" and args.data_command == "sample-csv":
+        write_sample_csv(args)
         return
     parser.print_help()
 
