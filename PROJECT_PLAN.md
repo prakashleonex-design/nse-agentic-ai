@@ -159,7 +159,8 @@ Every strategy family must produce structured trade ideas with instrument, direc
    - Add confirmation workflow before resetting a live kill switch.
 5. Build assistant workflow:
    - Make the reviewer return structured approval, objections, and checklist items.
-   - Add a daily pre-market checklist and post-market journal summary.
+   - Journal summary command is in place for decision/order review.
+   - Add a daily pre-market checklist and richer post-market AI narrative summary.
 6. Live readiness gates:
    - Add dry-run Angel order payload validation.
    - Add manual approval prompts.

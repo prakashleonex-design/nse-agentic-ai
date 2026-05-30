@@ -15,6 +15,7 @@ from nse_agentic_trader.market_data import AngelHistoricalCandleProvider, CsvCan
 from nse_agentic_trader.models import MarketSnapshot, OptionContract, OptionType, OrderRequest, RiskDecision, Side, SignalAction, TradeSignal
 from nse_agentic_trader.risk import RiskManager
 from nse_agentic_trader.risk.state import RiskStateStore
+from nse_agentic_trader.reports import build_journal_report
 from nse_agentic_trader.session import load_bars as load_session_bars
 from nse_agentic_trader.session import run_paper_session
 from nse_agentic_trader.strategy import available_strategy_names, build_strategy
@@ -341,6 +342,13 @@ def run_backtest(args) -> None:
     print(f"Net realized P&L: {summary.net_realized_pnl:.2f}")
 
 
+def run_report(args) -> None:
+    settings = load_settings()
+    report = build_journal_report(args.journal_path or settings.journal_path, args.date.date() if args.date else None)
+    for line in report.lines():
+        print(line)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="NSE agentic trader starter")
     subparsers = parser.add_subparsers(dest="command")
@@ -369,6 +377,10 @@ def main() -> None:
     kill_parser = risk_subparsers.add_parser("kill", help="Turn on the kill switch")
     kill_parser.add_argument("--reason", default="Manual kill switch")
     risk_subparsers.add_parser("reset", help="Reset today's paper risk state")
+
+    report_parser = subparsers.add_parser("report", help="Summarize journal decisions and orders")
+    report_parser.add_argument("--journal-path", type=Path)
+    report_parser.add_argument("--date", type=lambda value: datetime.strptime(value, "%Y-%m-%d"))
 
     _add_run_args(parser)
     args = parser.parse_args()
@@ -404,6 +416,9 @@ def main() -> None:
         return
     if args.command == "risk" and args.risk_command == "reset":
         risk_reset()
+        return
+    if args.command == "report":
+        run_report(args)
         return
     parser.print_help()
 

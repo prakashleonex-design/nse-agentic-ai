@@ -104,6 +104,13 @@ PAPER_BROKERAGE_PER_ORDER=20
 PAPER_TRANSACTION_COST_BPS=6
 ```
 
+Summarize the journal:
+
+```powershell
+python -m nse_agentic_trader.app report
+python -m nse_agentic_trader.app report --date 2026-05-30
+```
+
 Run a specific strategy:
 
 ```powershell
