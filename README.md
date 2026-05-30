@@ -111,6 +111,8 @@ python -m nse_agentic_trader.app report
 python -m nse_agentic_trader.app report --date 2026-05-30
 ```
 
+The trade reviewer records a structured verdict (`APPROVED`, `CAUTION`, or `REJECTED`), concerns, checklist items, and reward/risk into the journal.
+
 Run a specific strategy:
 
 ```powershell

@@ -8,11 +8,11 @@ def test_journal_report_summarizes_modern_rows(tmp_path):
     journal.write_text(
         "timestamp,symbol,strategy_name,strategy_family,action,side,entry,stop_loss,target,"
         "invalidation,expected_holding_minutes,blocked_by_filters,filter_reasons,confidence,"
-        "risk_approved,quantity,agent_approved,summary,order_id,order_message\n"
+        "risk_approved,quantity,agent_approved,review_verdict,review_concerns,review_checklist,risk_reward,summary,order_id,order_message\n"
         "2026-05-30T10:00:00,NIFTY,opening_range_breakout,breakout,ENTER_LONG,BUY,100,95,110,"
-        "below range,20,False,,0.6,True,50,True,ok,PAPER-1,filled\n"
+        "below range,20,False,,0.6,True,50,True,APPROVED,,check,2.0,ok,PAPER-1,filled\n"
         "2026-05-30T10:05:00,NIFTY,vwap_pullback,trend_following,WAIT,BUY,100,95,110,"
-        "below vwap,20,True,Low volume,0.6,False,0,False,blocked,,\n",
+        "below vwap,20,True,Low volume,0.6,False,0,False,REJECTED,Low volume,check,2.0,blocked,,\n",
         encoding="utf-8",
     )
 
@@ -23,6 +23,8 @@ def test_journal_report_summarizes_modern_rows(tmp_path):
     assert report.risk_approved == 1
     assert report.agent_approved == 1
     assert report.filter_blocks == 1
+    assert report.verdicts["APPROVED"] == 1
+    assert report.verdicts["REJECTED"] == 1
     assert report.strategies["opening_range_breakout"] == 1
     assert report.actions["WAIT"] == 1
 

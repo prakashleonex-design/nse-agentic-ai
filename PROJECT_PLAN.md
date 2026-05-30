@@ -158,7 +158,7 @@ Every strategy family must produce structured trade ideas with instrument, direc
    - Add stricter rules for option selling: paper-only, margin-aware, and defined-risk first.
    - Add confirmation workflow before resetting a live kill switch.
 5. Build assistant workflow:
-   - Make the reviewer return structured approval, objections, and checklist items.
+   - Reviewer now returns structured approval verdict, objections, checklist items, and reward/risk.
    - Journal summary command is in place for decision/order review.
    - Add a daily pre-market checklist and richer post-market AI narrative summary.
 6. Live readiness gates:

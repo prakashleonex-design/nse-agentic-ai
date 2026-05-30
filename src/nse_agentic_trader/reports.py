@@ -18,6 +18,7 @@ class JournalReport:
     orders: int
     filter_blocks: int
     total_quantity: int
+    verdicts: Counter[str]
 
     def lines(self) -> list[str]:
         return [
@@ -28,6 +29,7 @@ class JournalReport:
             f"Agent approved: {self.agent_approved}",
             f"Filter blocks: {self.filter_blocks}",
             f"Total quantity: {self.total_quantity}",
+            f"Review verdicts: {_format_counter(self.verdicts)}",
             f"Symbols: {_format_counter(self.symbols)}",
             f"Strategies: {_format_counter(self.strategies)}",
             f"Actions: {_format_counter(self.actions)}",
@@ -43,10 +45,11 @@ def build_journal_report(path: Path, report_date: date | None = None) -> Journal
     orders = 0
     filter_blocks = 0
     total_quantity = 0
+    verdicts: Counter[str] = Counter()
     rows = 0
 
     if not path.exists():
-        return JournalReport(0, symbols, strategies, actions, 0, 0, 0, 0, 0)
+        return JournalReport(0, symbols, strategies, actions, 0, 0, 0, 0, 0, Counter())
 
     with path.open("r", newline="", encoding="utf-8-sig") as handle:
         for row in csv.DictReader(handle):
@@ -62,6 +65,7 @@ def build_journal_report(path: Path, report_date: date | None = None) -> Journal
             orders += int(bool(row.get("order_id")))
             filter_blocks += int(_as_bool(row.get("blocked_by_filters", "")))
             total_quantity += _as_int(row.get("quantity", "0"))
+            verdicts[_value(row, "review_verdict", "legacy_or_unset")] += 1
 
     return JournalReport(
         rows=rows,
@@ -73,6 +77,7 @@ def build_journal_report(path: Path, report_date: date | None = None) -> Journal
         orders=orders,
         filter_blocks=filter_blocks,
         total_quantity=total_quantity,
+        verdicts=verdicts,
     )
 
 
