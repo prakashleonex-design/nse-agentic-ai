@@ -118,6 +118,7 @@ def run_paper_session(
     max_entries: int | None = None,
     map_options: bool = True,
     apply_filters: bool = True,
+    verbose: bool = True,
 ) -> SessionSummary:
     if map_options:
         broker = PaperBroker(settings.paper_option_slippage_bps, settings.paper_option_min_slippage)
@@ -152,7 +153,8 @@ def run_paper_session(
                     winning_exits += 1
                 elif pnl_delta < 0:
                     losing_exits += 1
-                print(result.message)
+                if verbose:
+                    print(result.message)
 
         if _has_open_position(broker):
             continue
@@ -170,7 +172,8 @@ def run_paper_session(
             risk = RiskDecision(False, 0, "Avoid-trade filters blocked this setup")
             review = reviewer.review(blocked_signal, risk)
             journal.write(blocked_signal, risk, review, None)
-            print(review.summary)
+            if verbose:
+                print(review.summary)
             continue
 
         order_signal, contract = _option_signal_if_available(
@@ -210,11 +213,12 @@ def run_paper_session(
                     active_contracts[contract.instrument.trading_symbol] = contract
 
         journal.write(order_signal, risk, review, order_result)
-        print(review.summary)
-        if contract:
-            print(f"Contract: {contract.instrument.trading_symbol} token={contract.instrument.token} lot={contract.instrument.lot_size}")
-        if order_result:
-            print(f"Order: {order_result.order_id} - {order_result.message}")
+        if verbose:
+            print(review.summary)
+            if contract:
+                print(f"Contract: {contract.instrument.trading_symbol} token={contract.instrument.token} lot={contract.instrument.lot_size}")
+            if order_result:
+                print(f"Order: {order_result.order_id} - {order_result.message}")
 
     gross_realized_pnl = broker.realized_pnl
     return SessionSummary(

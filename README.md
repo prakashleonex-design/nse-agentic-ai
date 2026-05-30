@@ -112,6 +112,14 @@ Save a Markdown backtest report:
 python -m nse_agentic_trader.app backtest --symbol NIFTY --strategy opening_range_breakout --data-source csv --csv-path .\data\nifty_1m.csv --max-entries 3 --output .\reports\backtest-nifty.md
 ```
 
+Compare all registered strategies on the same candle data:
+
+```powershell
+python -m nse_agentic_trader.app compare --symbol NIFTY --data-source csv --csv-path .\data\nifty_1m.csv --max-entries 3 --no-option-mapping --output .\reports\strategy-comparison.md
+```
+
+Comparison runs are isolated paper simulations, so they do not write to your normal `journal.csv` or daily risk state.
+
 Use `--no-option-mapping` to test directly on the input symbol instead of mapping index signals to option contracts.
 Use `--no-filters` only for strategy mechanics tests where you intentionally want to bypass avoid-trade filters.
 

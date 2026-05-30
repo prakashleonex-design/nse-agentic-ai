@@ -8,6 +8,7 @@ from nse_agentic_trader.agent import TradeReviewer
 from nse_agentic_trader.broker import PaperBroker
 from nse_agentic_trader.broker.angel import AngelSmartApiBroker
 from nse_agentic_trader.checklist import build_premarket_checklist, checklist_lines
+from nse_agentic_trader.comparison import build_strategy_comparison_report, compare_strategies, comparison_lines
 from nse_agentic_trader.config import load_settings
 from nse_agentic_trader.config_tools import init_env_file, settings_lines
 from nse_agentic_trader.data_quality import validate_candles
@@ -370,6 +371,53 @@ def run_backtest(args) -> None:
         print(f"Wrote backtest report to {args.output}")
 
 
+def run_compare(args) -> None:
+    if args.mode != "paper":
+        raise SystemExit("Strategy comparison is paper-only. Use --mode paper.")
+    settings = load_settings()
+    bars = load_session_bars(
+        settings,
+        args.symbol,
+        args.data_source,
+        args.csv_path,
+        args.from_date,
+        args.to_date,
+        args.interval,
+        args.data_exchange,
+        args.data_token,
+        OptionType(args.data_option_type),
+        args.option_strike,
+        args.option_expiry,
+    )
+    strategies = args.strategies or available_strategy_names()
+    rows = compare_strategies(
+        settings,
+        bars,
+        strategies,
+        args.symbol,
+        args.option_strike,
+        args.option_expiry,
+        args.max_entries,
+        not args.no_option_mapping,
+        not args.no_filters,
+    )
+    for line in comparison_lines(rows):
+        print(line)
+    if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(
+            build_strategy_comparison_report(
+                rows,
+                args.symbol,
+                args.data_source,
+                not args.no_option_mapping,
+                not args.no_filters,
+            ),
+            encoding="utf-8",
+        )
+        print(f"Wrote strategy comparison report to {args.output}")
+
+
 def run_report(args) -> None:
     settings = load_settings()
     report = build_journal_report(args.journal_path or settings.journal_path, args.date.date() if args.date else None)
@@ -473,6 +521,14 @@ def main() -> None:
     backtest_parser.add_argument("--no-filters", action="store_true", help="Disable avoid-trade filters for strategy mechanics testing")
     backtest_parser.add_argument("--output", type=Path, help="Optional Markdown backtest report path")
 
+    compare_parser = subparsers.add_parser("compare", help="Compare registered strategies on the same paper data")
+    _add_run_args(compare_parser, include_strategy=False)
+    compare_parser.add_argument("--strategies", nargs="+", choices=available_strategy_names(), help="Strategies to compare; defaults to all")
+    compare_parser.add_argument("--max-entries", type=int, default=None)
+    compare_parser.add_argument("--no-option-mapping", action="store_true", help="Keep signals on the input symbol instead of mapping to options")
+    compare_parser.add_argument("--no-filters", action="store_true", help="Disable avoid-trade filters for strategy mechanics testing")
+    compare_parser.add_argument("--output", type=Path, help="Optional Markdown strategy comparison report path")
+
     instruments_parser = subparsers.add_parser("instruments", help="Instrument master utilities")
     instrument_subparsers = instruments_parser.add_subparsers(dest="instrument_command")
     validate_parser = instrument_subparsers.add_parser("validate", help="Validate an NSE index option contract")
@@ -526,7 +582,7 @@ def main() -> None:
     data_parser = subparsers.add_parser("data", help="Market-data utilities")
     data_subparsers = data_parser.add_subparsers(dest="data_command")
     validate_data_parser = data_subparsers.add_parser("validate", help="Validate candle data quality")
-    _add_run_args(validate_data_parser)
+    _add_run_args(validate_data_parser, include_strategy=False)
     validate_data_parser.add_argument("--min-bars", type=int, default=1)
     sample_csv_parser = data_subparsers.add_parser("sample-csv", help="Write a small sample candle CSV for local testing")
     sample_csv_parser.add_argument("--symbol", default="NIFTY")
@@ -555,6 +611,9 @@ def main() -> None:
         return
     if args.command == "backtest":
         run_backtest(args)
+        return
+    if args.command == "compare":
+        run_compare(args)
         return
     if args.command == "instruments" and args.instrument_command == "validate":
         validate_instrument(args.symbol, OptionType(args.option_type), args.strike, args.expiry, args.refresh_instruments)
@@ -595,7 +654,7 @@ def main() -> None:
     parser.print_help()
 
 
-def _add_run_args(parser: argparse.ArgumentParser) -> None:
+def _add_run_args(parser: argparse.ArgumentParser, include_strategy: bool = True) -> None:
     parser.add_argument("--symbol", default="NIFTY", help="Trading symbol label")
     parser.add_argument("--mode", choices=["paper", "live"], default="paper")
     parser.add_argument("--option-strike", type=float, help="NIFTY/BANKNIFTY option strike to paper trade")
@@ -609,12 +668,13 @@ def _add_run_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--data-exchange", default="NSE", help="Exchange for Angel candle data")
     parser.add_argument("--data-token", help="Angel symbol token for historical candle data")
     parser.add_argument("--data-option-type", choices=[item.value for item in OptionType], default=OptionType.CE.value)
-    parser.add_argument(
-        "--strategy",
-        choices=available_strategy_names(),
-        default="opening_range_breakout",
-        help="Strategy module to run",
-    )
+    if include_strategy:
+        parser.add_argument(
+            "--strategy",
+            choices=available_strategy_names(),
+            default="opening_range_breakout",
+            help="Strategy module to run",
+        )
 
 
 if __name__ == "__main__":

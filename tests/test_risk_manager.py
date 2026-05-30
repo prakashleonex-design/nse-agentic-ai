@@ -3,8 +3,8 @@ from nse_agentic_trader.models import Side, SignalAction, TradeSignal
 from nse_agentic_trader.risk import RiskManager
 
 
-def test_risk_manager_sizes_quantity_from_stop_distance():
-    settings = Settings(risk_per_trade=1000, max_qty=50)
+def test_risk_manager_sizes_quantity_from_stop_distance(tmp_path):
+    settings = Settings(risk_per_trade=1000, max_qty=50, risk_state_path=tmp_path / "risk_state.json")
     risk = RiskManager(settings)
     signal = TradeSignal("NIFTY", SignalAction.ENTER_LONG, Side.BUY, 100, 90, 115, 0.7, "test")
 
@@ -14,8 +14,8 @@ def test_risk_manager_sizes_quantity_from_stop_distance():
     assert decision.quantity == 50
 
 
-def test_risk_manager_rejects_missing_stop():
-    settings = Settings()
+def test_risk_manager_rejects_missing_stop(tmp_path):
+    settings = Settings(risk_state_path=tmp_path / "risk_state.json")
     risk = RiskManager(settings)
     signal = TradeSignal("NIFTY", SignalAction.ENTER_LONG, Side.BUY, 100, None, 115, 0.7, "test")
 
