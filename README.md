@@ -157,7 +157,7 @@ Avoid-trade filters run before risk/execution and can block setups for:
 Create a `.env` file from `.env.example`:
 
 ```powershell
-Copy-Item .env.example .env
+python -m nse_agentic_trader.app config init
 ```
 
 Fill in:
@@ -177,6 +177,26 @@ ALLOW_LIVE_ORDERS=true
 ```
 
 Both are required by design.
+
+`.env` entries are file contents, not PowerShell commands. Put this inside `.env`:
+
+```text
+PAPER_BROKERAGE_PER_ORDER=20
+PAPER_TRANSACTION_COST_BPS=6
+```
+
+For temporary PowerShell session variables, use PowerShell syntax instead:
+
+```powershell
+$env:PAPER_BROKERAGE_PER_ORDER = "20"
+$env:PAPER_TRANSACTION_COST_BPS = "6"
+```
+
+Check the effective settings with secrets masked:
+
+```powershell
+python -m nse_agentic_trader.app config show
+```
 
 ## Suggested Build Path
 

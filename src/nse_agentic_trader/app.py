@@ -8,6 +8,7 @@ from nse_agentic_trader.agent import TradeReviewer
 from nse_agentic_trader.broker import PaperBroker
 from nse_agentic_trader.broker.angel import AngelSmartApiBroker
 from nse_agentic_trader.config import load_settings
+from nse_agentic_trader.config_tools import init_env_file, settings_lines
 from nse_agentic_trader.execution import build_angel_order_params, validate_order_request
 from nse_agentic_trader.filters import AvoidTradeFilterEngine, apply_filter_block
 from nse_agentic_trader.instruments import AngelInstrumentMaster, OptionQuery, ensure_instrument_master, instrument_master_info
@@ -376,6 +377,15 @@ def validate_order(args) -> None:
         print(f"{key}: {value}")
 
 
+def config_show() -> None:
+    for line in settings_lines(load_settings()):
+        print(line)
+
+
+def config_init(args) -> None:
+    print(init_env_file(overwrite=args.overwrite))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="NSE agentic trader starter")
     subparsers = parser.add_subparsers(dest="command")
@@ -426,6 +436,12 @@ def main() -> None:
     validate_order_parser.add_argument("--tick-size", type=float, default=0.05)
     validate_order_parser.add_argument("--manual-approval", default="", help="Pass APPROVE only for explicit live-mode approval")
 
+    config_parser = subparsers.add_parser("config", help="Configuration helpers")
+    config_subparsers = config_parser.add_subparsers(dest="config_command")
+    config_subparsers.add_parser("show", help="Show effective settings with secrets masked")
+    config_init_parser = config_subparsers.add_parser("init", help="Create .env from .env.example")
+    config_init_parser.add_argument("--overwrite", action="store_true")
+
     _add_run_args(parser)
     args = parser.parse_args()
     if args.command in (None, "run"):
@@ -466,6 +482,12 @@ def main() -> None:
         return
     if args.command == "order" and args.order_command == "validate":
         validate_order(args)
+        return
+    if args.command == "config" and args.config_command == "show":
+        config_show()
+        return
+    if args.command == "config" and args.config_command == "init":
+        config_init(args)
         return
     parser.print_help()
 

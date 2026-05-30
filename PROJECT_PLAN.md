@@ -27,6 +27,7 @@ Every strategy family must produce structured trade ideas with instrument, direc
 - Add risk manager and kill-switch rules.
 - Keep AI as a reviewer/explainer.
 - Start with option buying and breakout/momentum examples because the downside is naturally capped to premium paid.
+- Configuration helper commands are in place for `.env` creation and masked settings review.
 
 ## Phase 2: Angel SmartAPI Market Data
 
