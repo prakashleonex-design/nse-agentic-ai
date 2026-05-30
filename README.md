@@ -20,6 +20,21 @@ An extensible skeleton for:
 5. Executing in paper mode by default.
 6. Journaling every decision.
 
+## Strategy Scope
+
+The system is being shaped around six strategy families:
+
+- Scalping or momentum.
+- Breakout.
+- Option buying.
+- Option selling.
+- Trend following.
+- Mean reversion.
+
+Each strategy must produce a structured trade idea: symbol, option contract when applicable, entry, stop loss, target, confidence, reason, invalidation condition, and expected holding time. The assistant reviews and challenges these ideas before any broker action.
+
+Option buying and breakout/momentum are the first practical implementation targets because risk is naturally capped to premium paid. Option selling is research and paper-only until margin checks, defined-risk spreads, emergency exits, and stricter live controls are implemented.
+
 ## What This Is Not
 
 This is not a profitable trading system, a financial advisor, or a plug-and-play live bot. Use it as engineering infrastructure and test every strategy with historical data, paper trading, and tiny live size before risking real capital.
@@ -46,6 +61,21 @@ python -m venv .venv
 pip install -e .
 python -m nse_agentic_trader.app --mode paper --symbol NIFTY
 ```
+
+Run a specific strategy:
+
+```powershell
+python -m nse_agentic_trader.app --mode paper --symbol NIFTY --strategy opening_range_breakout
+```
+
+Available starter strategy names:
+
+- `opening_range_breakout`
+- `scalping_momentum`
+- `option_buying`
+- `option_selling`
+- `trend_following`
+- `mean_reversion`
 
 ## Angel SmartAPI Setup
 
@@ -107,3 +137,4 @@ Paper option orders now require a reference price, enforce lot-size multiples wh
 - Max quantity caps position size.
 - Live orders require an explicit environment flag.
 - Every signal, rejection, and fill is journaled.
+- Option selling remains paper-only until explicit future approval and additional risk systems exist.

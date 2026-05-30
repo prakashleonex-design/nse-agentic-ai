@@ -2,15 +2,27 @@
 
 ## Goal
 
-Build an agentic AI trading assistant for NSE index intraday trading using Angel One SmartAPI.
+Build an agentic AI professional trader assistant for NSE index intraday trading using Angel One SmartAPI.
+
+The system must support these strategy families as first-class modules:
+
+- Scalping or momentum.
+- Breakout.
+- Option buying.
+- Option selling.
+- Trend following.
+- Mean reversion.
+
+Every strategy family must produce structured trade ideas with instrument, direction, entry, stop loss, target, confidence, invalidation condition, expected holding time, and reason. The AI layer reviews and challenges those ideas; it does not invent uncontrolled orders.
 
 ## Phase 1: Safe Local Prototype
 
 - Use paper trading only.
-- Implement deterministic strategy examples.
+- Implement deterministic strategy examples behind a common strategy interface.
 - Add journal logging.
 - Add risk manager and kill-switch rules.
 - Keep AI as a reviewer/explainer.
+- Start with option buying and breakout/momentum examples because the downside is naturally capped to premium paid.
 
 ## Phase 2: Angel SmartAPI Market Data
 
@@ -23,10 +35,56 @@ Build an agentic AI trading assistant for NSE index intraday trading using Angel
 ## Phase 3: Strategy Research
 
 - Add backtesting using historical 1-minute data.
-- Test opening-range breakout, VWAP pullback, and trend continuation.
+- Test opening-range breakout, VWAP pullback, trend continuation, scalping/momentum, option buying, option selling, and mean reversion.
 - Track win rate, expectancy, drawdown, max adverse excursion, slippage.
 - Replace the current sample option premium estimator with recorded/streamed option LTP candles for paper trading.
 - Model realistic intraday costs: brokerage, exchange fees, STT, GST, stamp duty, and bid/ask spread.
+- Keep option selling disabled for live trading until margin checks, defined-risk spreads, and emergency exits are implemented.
+- Maintain separate metrics by strategy family, index, weekday, expiry distance, time of day, and volatility regime.
+
+## Strategy Family Requirements
+
+### Scalping Or Momentum
+
+- Purpose: capture fast intraday moves in NIFTY/BANKNIFTY options.
+- Inputs: 1-minute or faster candles, LTP, volume, VWAP, opening range, momentum strength, spread filter.
+- Default instrument: ATM or slightly ITM option buying.
+- Required controls: tight stop loss, cooldown after loss, max trades per session, no trading during illiquid/spread-widening periods.
+
+### Breakout
+
+- Purpose: trade clean breaks from opening range, prior high/low, VWAP bands, or consolidation zones.
+- Inputs: range high/low, candle close confirmation, volume expansion, trend filter.
+- Default instrument: index option buying.
+- Required controls: reject late entries, reject false-break risk when candle body is weak, mandatory stop below/above breakout structure.
+
+### Option Buying
+
+- Purpose: directional defined-risk trades using CE/PE contracts.
+- Inputs: underlying signal, option LTP, strike selection, expiry, liquidity, spread, implied volatility context when available.
+- Default state: enabled for paper trading.
+- Required controls: premium-at-risk cap, stop loss required, target or trailing exit, avoid far OTM illiquid contracts.
+
+### Option Selling
+
+- Purpose: premium capture using short options or defined-risk spreads.
+- Inputs: margin availability, volatility, support/resistance, option chain, Greeks when available, expiry risk.
+- Default state: research and paper only; live disabled by policy until additional controls exist.
+- Required controls: margin check, max loss model, hedge/defined-risk structure preference, emergency exit, no naked live selling without explicit future approval.
+
+### Trend Following
+
+- Purpose: stay with sustained intraday directional moves.
+- Inputs: higher-timeframe trend, moving averages, VWAP slope, market structure, trailing stop.
+- Default instrument: option buying or futures/index proxy in paper.
+- Required controls: avoid chop, trail stops, reduce size after extended move, exit near end of day.
+
+### Mean Reversion
+
+- Purpose: fade stretched moves back toward VWAP or range mean when market conditions support it.
+- Inputs: distance from VWAP, RSI/oscillator, volatility bands, support/resistance, rejection candles.
+- Default instrument: option buying in the reversal direction for capped risk.
+- Required controls: only trade in non-trending regime, hard stop beyond extreme, reject against strong trend days.
 
 ## Phase 4: Agent Workflow
 
@@ -54,14 +112,19 @@ Build an agentic AI trading assistant for NSE index intraday trading using Angel
    - Feed real option LTP bars instead of estimating premiums from index spot.
    - Simulate stop/target exits conservatively when both hit inside the same candle.
    - Add transaction costs and realized/unrealized P&L reporting.
-3. Strengthen risk:
+3. Build the strategy framework:
+   - Common strategy interface and strategy registry are in place.
+   - CLI selection is in place for scalping, breakout, option buying, option selling, trend following, and mean reversion starter modules.
+   - Journal tags are in place; per-strategy paper metrics still need aggregation.
+4. Strengthen risk:
    - Add explicit kill switch state persisted to disk.
    - Enforce lot-size-aware quantity sizing before broker submission.
    - Add symbol-level exposure caps for NIFTY and BANKNIFTY.
-4. Build assistant workflow:
+   - Add stricter rules for option selling: paper-only, margin-aware, and defined-risk first.
+5. Build assistant workflow:
    - Make the reviewer return structured approval, objections, and checklist items.
    - Add a daily pre-market checklist and post-market journal summary.
-5. Live readiness gates:
+6. Live readiness gates:
    - Add dry-run Angel order payload validation.
    - Add manual approval prompts.
    - Add one-lot-only live pilot mode after long paper validation.

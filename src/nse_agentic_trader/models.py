@@ -22,6 +22,15 @@ class OptionType(str, Enum):
     PE = "PE"
 
 
+class StrategyFamily(str, Enum):
+    SCALPING_MOMENTUM = "scalping_momentum"
+    BREAKOUT = "breakout"
+    OPTION_BUYING = "option_buying"
+    OPTION_SELLING = "option_selling"
+    TREND_FOLLOWING = "trend_following"
+    MEAN_REVERSION = "mean_reversion"
+
+
 @dataclass(frozen=True)
 class MarketSnapshot:
     symbol: str
@@ -43,6 +52,10 @@ class TradeSignal:
     target: float | None
     confidence: float
     reason: str
+    strategy_name: str = ""
+    strategy_family: StrategyFamily | None = None
+    invalidation: str = ""
+    expected_holding_minutes: int | None = None
 
 
 @dataclass(frozen=True)

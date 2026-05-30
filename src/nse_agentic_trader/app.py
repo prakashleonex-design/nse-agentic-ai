@@ -11,7 +11,7 @@ from nse_agentic_trader.instruments import AngelInstrumentMaster, OptionQuery, e
 from nse_agentic_trader.journal import Journal
 from nse_agentic_trader.models import MarketSnapshot, OptionContract, OptionType, OrderRequest, Side, SignalAction, TradeSignal
 from nse_agentic_trader.risk import RiskManager
-from nse_agentic_trader.strategy import OpeningRangeBreakout
+from nse_agentic_trader.strategy import available_strategy_names, build_strategy
 
 
 def sample_bars(symbol: str) -> list[MarketSnapshot]:
@@ -50,10 +50,11 @@ def run_once(
     option_strike: float | None = None,
     option_expiry: datetime | None = None,
     refresh_instruments: bool = False,
+    strategy_name: str = "opening_range_breakout",
 ) -> None:
     settings = load_settings()
     broker = build_broker(mode)
-    strategy = OpeningRangeBreakout()
+    strategy = build_strategy(strategy_name)
     risk_manager = RiskManager(settings)
     reviewer = TradeReviewer()
     journal = Journal(settings.journal_path)
@@ -136,6 +137,10 @@ def _option_signal_if_available(
             target=premium + option_reward,
             confidence=signal.confidence,
             reason=f"{signal.reason}; mapped to {contract.underlying} {contract.strike:g}{contract.option_type.value}",
+            strategy_name=signal.strategy_name,
+            strategy_family=signal.strategy_family,
+            invalidation=signal.invalidation,
+            expected_holding_minutes=signal.expected_holding_minutes,
         ),
         contract,
     )
@@ -153,8 +158,14 @@ def main() -> None:
     parser.add_argument("--option-strike", type=float, help="NIFTY/BANKNIFTY option strike to paper trade")
     parser.add_argument("--option-expiry", type=lambda value: datetime.strptime(value, "%Y-%m-%d"))
     parser.add_argument("--refresh-instruments", action="store_true", help="Download/cache Angel instrument master before lookup")
+    parser.add_argument(
+        "--strategy",
+        choices=available_strategy_names(),
+        default="opening_range_breakout",
+        help="Strategy module to run",
+    )
     args = parser.parse_args()
-    run_once(args.symbol, args.mode, args.option_strike, args.option_expiry, args.refresh_instruments)
+    run_once(args.symbol, args.mode, args.option_strike, args.option_expiry, args.refresh_instruments, args.strategy)
 
 
 if __name__ == "__main__":
