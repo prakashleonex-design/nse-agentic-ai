@@ -10,6 +10,7 @@ from nse_agentic_trader.broker.angel import AngelSmartApiBroker
 from nse_agentic_trader.checklist import build_premarket_checklist, checklist_lines
 from nse_agentic_trader.config import load_settings
 from nse_agentic_trader.config_tools import init_env_file, settings_lines
+from nse_agentic_trader.data_quality import validate_candles
 from nse_agentic_trader.execution import build_angel_order_params, validate_order_request
 from nse_agentic_trader.filters import AvoidTradeFilterEngine, apply_filter_block
 from nse_agentic_trader.instruments import AngelInstrumentMaster, OptionQuery, ensure_instrument_master, instrument_master_info
@@ -210,11 +211,15 @@ def _load_bars(
     option_expiry: datetime | None,
 ) -> list[MarketSnapshot]:
     if data_source == "sample":
-        return sample_bars(symbol)
+        bars = sample_bars(symbol)
+        _raise_if_invalid_candles(bars)
+        return bars
     if data_source == "csv":
         if csv_path is None:
             raise SystemExit("--csv-path is required when --data-source csv")
-        return list(CsvCandleProvider(csv_path, symbol).candles())
+        bars = list(CsvCandleProvider(csv_path, symbol).candles())
+        _raise_if_invalid_candles(bars)
+        return bars
     if data_source == "angel":
         if from_date is None or to_date is None:
             raise SystemExit("--from-date and --to-date are required when --data-source angel")
@@ -230,7 +235,7 @@ def _load_bars(
             candle_symbol = contract.instrument.trading_symbol
         if token is None:
             raise SystemExit("--data-token is required for Angel candles unless --option-strike maps to a cached option contract")
-        return list(
+        bars = list(
             AngelHistoricalCandleProvider(
                 settings,
                 candle_symbol,
@@ -241,7 +246,15 @@ def _load_bars(
                 to_date,
             ).candles()
         )
+        _raise_if_invalid_candles(bars)
+        return bars
     raise SystemExit(f"Unknown data source: {data_source}")
+
+
+def _raise_if_invalid_candles(bars: list[MarketSnapshot]) -> None:
+    report = validate_candles(bars)
+    if not report.ok:
+        raise SystemExit("\n".join(report.lines()))
 
 
 def validate_instrument(
@@ -408,6 +421,25 @@ def run_postmarket(args) -> None:
         print(text, end="")
 
 
+def validate_data(args) -> None:
+    bars = _load_bars(
+        load_settings(),
+        args.symbol,
+        args.data_source,
+        args.csv_path,
+        args.from_date,
+        args.to_date,
+        args.interval,
+        args.data_exchange,
+        args.data_token,
+        OptionType(args.data_option_type),
+        args.option_strike,
+        args.option_expiry,
+    )
+    for line in validate_candles(bars, min_bars=args.min_bars).lines():
+        print(line)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="NSE agentic trader starter")
     subparsers = parser.add_subparsers(dest="command")
@@ -471,6 +503,12 @@ def main() -> None:
     postmarket_parser.add_argument("--date", type=lambda value: datetime.strptime(value, "%Y-%m-%d"))
     postmarket_parser.add_argument("--output", type=Path, help="Optional Markdown output path")
 
+    data_parser = subparsers.add_parser("data", help="Market-data utilities")
+    data_subparsers = data_parser.add_subparsers(dest="data_command")
+    validate_data_parser = data_subparsers.add_parser("validate", help="Validate candle data quality")
+    _add_run_args(validate_data_parser)
+    validate_data_parser.add_argument("--min-bars", type=int, default=1)
+
     _add_run_args(parser)
     args = parser.parse_args()
     if args.command in (None, "run"):
@@ -523,6 +561,9 @@ def main() -> None:
         return
     if args.command == "postmarket":
         run_postmarket(args)
+        return
+    if args.command == "data" and args.data_command == "validate":
+        validate_data(args)
         return
     parser.print_help()
 

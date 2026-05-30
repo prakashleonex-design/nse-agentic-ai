@@ -80,6 +80,12 @@ CSV columns:
 timestamp,symbol,open,high,low,close,volume
 ```
 
+Validate candle data before running a strategy:
+
+```powershell
+python -m nse_agentic_trader.app data validate --data-source csv --csv-path .\data\nifty_1m.csv --symbol NIFTY --min-bars 100
+```
+
 Fetch historical candles from Angel SmartAPI after credentials are configured:
 
 ```powershell

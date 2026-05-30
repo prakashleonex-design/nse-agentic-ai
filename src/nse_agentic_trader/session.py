@@ -8,6 +8,7 @@ from nse_agentic_trader.agent import TradeReviewer
 from nse_agentic_trader.broker.paper import PaperBroker
 from nse_agentic_trader.config import Settings
 from nse_agentic_trader.costs import CostModel
+from nse_agentic_trader.data_quality import validate_candles
 from nse_agentic_trader.filters import AvoidTradeFilterEngine, apply_filter_block
 from nse_agentic_trader.instruments import AngelInstrumentMaster, OptionQuery
 from nse_agentic_trader.journal import Journal
@@ -51,11 +52,15 @@ def load_bars(
     if data_source == "sample":
         from nse_agentic_trader.app import sample_bars
 
-        return sample_bars(symbol)
+        bars = sample_bars(symbol)
+        _raise_if_invalid(bars)
+        return bars
     if data_source == "csv":
         if csv_path is None:
             raise SystemExit("--csv-path is required when --data-source csv")
-        return list(CsvCandleProvider(csv_path, symbol).candles())
+        bars = list(CsvCandleProvider(csv_path, symbol).candles())
+        _raise_if_invalid(bars)
+        return bars
     if data_source == "angel":
         if from_date is None or to_date is None:
             raise SystemExit("--from-date and --to-date are required when --data-source angel")
@@ -71,7 +76,7 @@ def load_bars(
             candle_symbol = contract.instrument.trading_symbol
         if token is None:
             raise SystemExit("--data-token is required for Angel candles unless --option-strike maps to a cached option contract")
-        return list(
+        bars = list(
             AngelHistoricalCandleProvider(
                 settings,
                 candle_symbol,
@@ -82,7 +87,15 @@ def load_bars(
                 to_date,
             ).candles()
         )
+        _raise_if_invalid(bars)
+        return bars
     raise SystemExit(f"Unknown data source: {data_source}")
+
+
+def _raise_if_invalid(bars: list[MarketSnapshot]) -> None:
+    report = validate_candles(bars)
+    if not report.ok:
+        raise SystemExit("\n".join(report.lines()))
 
 
 def run_paper_session(

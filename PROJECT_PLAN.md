@@ -144,6 +144,7 @@ Every strategy family must produce structured trade ideas with instrument, direc
    - Add tests for weekly/monthly expiry parsing as Angel formats evolve.
 2. Improve paper trading:
    - CSV candle replay and guarded Angel historical candle provider are in place.
+   - Candle data validation is in place for malformed OHLC, timestamps, volume, and minimum bar count.
    - Full candle-session paper replay is in place with entry count, exits, and realized P&L summary.
    - Feed real option LTP bars into option strategy execution instead of estimating premiums from index spot.
    - Simulate stop/target exits conservatively when both hit inside the same candle.
