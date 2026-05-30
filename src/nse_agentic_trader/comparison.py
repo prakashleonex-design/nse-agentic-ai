@@ -15,6 +15,14 @@ class StrategyComparisonRow:
     summary: SessionSummary
 
 
+@dataclass(frozen=True)
+class StrategyRecommendation:
+    action: str
+    strategy: str | None
+    reason: str
+    concerns: tuple[str, ...]
+
+
 def compare_strategies(
     settings: Settings,
     bars: list[MarketSnapshot],
@@ -54,6 +62,7 @@ def compare_strategies(
 def comparison_lines(rows: list[StrategyComparisonRow]) -> list[str]:
     if not rows:
         return ["No strategy comparison rows."]
+    recommendation = recommend_strategy(rows)
     lines = [
         "Strategy comparison",
         "strategy | signals | orders | exits | wins | losses | win_rate | gross_pnl | costs | net_pnl",
@@ -76,7 +85,52 @@ def comparison_lines(rows: list[StrategyComparisonRow]) -> list[str]:
                 ]
             )
         )
+    lines.extend(
+        [
+            "Recommendation",
+            f"action: {recommendation.action}",
+            f"strategy: {recommendation.strategy or 'none'}",
+            f"reason: {recommendation.reason}",
+        ]
+    )
+    for concern in recommendation.concerns:
+        lines.append(f"concern: {concern}")
     return lines
+
+
+def recommend_strategy(rows: list[StrategyComparisonRow]) -> StrategyRecommendation:
+    traded_rows = [row for row in rows if row.summary.orders_accepted > 0]
+    if not traded_rows:
+        return StrategyRecommendation(
+            "NO_TRADE",
+            None,
+            "No compared strategy produced an accepted paper trade.",
+            ("Wait for a cleaner setup instead of forcing a trade.",),
+        )
+
+    best = max(traded_rows, key=lambda row: (row.summary.net_realized_pnl, row.summary.win_rate))
+    concerns: list[str] = []
+    if best.summary.exits == 0:
+        concerns.append("Best strategy still has open/unresolved paper exposure in this replay.")
+    if best.summary.net_realized_pnl <= 0:
+        concerns.append("Best traded strategy is not profitable after estimated costs.")
+        return StrategyRecommendation(
+            "NO_TRADE",
+            best.strategy,
+            f"{best.strategy} was the best traded strategy, but net P&L is {best.summary.net_realized_pnl:.2f}.",
+            tuple(concerns),
+        )
+    if best.summary.win_rate < 50:
+        concerns.append("Win rate is below 50%; require stronger confirmation before considering this setup.")
+    if best.summary.orders_accepted < 2:
+        concerns.append("Evidence is thin because fewer than two trades were accepted.")
+    action = "PAPER_CANDIDATE" if not concerns else "PAPER_CANDIDATE_WITH_CAUTION"
+    return StrategyRecommendation(
+        action,
+        best.strategy,
+        f"{best.strategy} has the strongest positive net result in this isolated paper comparison.",
+        tuple(concerns),
+    )
 
 
 def build_strategy_comparison_report(
@@ -86,6 +140,7 @@ def build_strategy_comparison_report(
     map_options: bool,
     apply_filters: bool,
 ) -> str:
+    recommendation = recommend_strategy(rows)
     lines = [
         "# Strategy Comparison",
         "",
@@ -117,6 +172,19 @@ def build_strategy_comparison_report(
             )
             + " |"
         )
+    lines.extend(
+        [
+            "",
+            "## Assistant Recommendation",
+            "",
+            f"- Action: {recommendation.action}",
+            f"- Strategy: {recommendation.strategy or 'none'}",
+            f"- Reason: {recommendation.reason}",
+        ]
+    )
+    if recommendation.concerns:
+        lines.extend(["", "### Concerns", ""])
+        lines.extend(f"- {concern}" for concern in recommendation.concerns)
     lines.extend(
         [
             "",

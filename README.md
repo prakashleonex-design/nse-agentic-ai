@@ -119,6 +119,7 @@ python -m nse_agentic_trader.app compare --symbol NIFTY --data-source csv --csv-
 ```
 
 Comparison runs are isolated paper simulations, so they do not write to your normal `journal.csv` or daily risk state.
+The comparison also prints an assistant recommendation. It can still say `NO_TRADE` even when one strategy wins the table if estimated costs, open exposure, or thin evidence make the setup unattractive.
 
 Use `--no-option-mapping` to test directly on the input symbol instead of mapping index signals to option contracts.
 Use `--no-filters` only for strategy mechanics tests where you intentionally want to bypass avoid-trade filters.
