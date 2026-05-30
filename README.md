@@ -206,6 +206,15 @@ python -m nse_agentic_trader.app premarket
 
 Use this before paper trading to confirm mode safety, live-order guard, instrument cache, risk state, journal path, and registered strategies.
 
+Build the post-market summary:
+
+```powershell
+python -m nse_agentic_trader.app postmarket
+python -m nse_agentic_trader.app postmarket --date 2026-05-30 --output .\reports\postmarket-2026-05-30.md
+```
+
+Use this after paper trading to review journal activity, risk state, strategy mix, review verdicts, and assistant notes.
+
 ## Suggested Build Path
 
 1. Keep `TRADING_MODE=paper`.

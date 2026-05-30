@@ -163,7 +163,8 @@ Every strategy family must produce structured trade ideas with instrument, direc
 5. Build assistant workflow:
    - Reviewer now returns structured approval verdict, objections, checklist items, and reward/risk.
    - Journal summary command is in place for decision/order review.
-   - Add a daily pre-market checklist and richer post-market AI narrative summary.
+   - Daily pre-market checklist and deterministic post-market summary are in place.
+   - Add richer AI narrative critique after enough paper data is collected.
 6. Live readiness gates:
    - Dry-run Angel order payload validation is in place.
    - Live-mode order validation requires an explicit manual approval token.

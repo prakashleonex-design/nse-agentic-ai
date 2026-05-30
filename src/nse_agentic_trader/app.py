@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from nse_agentic_trader.agent import TradeReviewer
@@ -16,6 +16,7 @@ from nse_agentic_trader.instruments import AngelInstrumentMaster, OptionQuery, e
 from nse_agentic_trader.journal import Journal
 from nse_agentic_trader.market_data import AngelHistoricalCandleProvider, CsvCandleProvider
 from nse_agentic_trader.models import MarketSnapshot, OptionContract, OptionType, OrderRequest, RiskDecision, Side, SignalAction, TradeSignal
+from nse_agentic_trader.postmarket import build_postmarket_summary
 from nse_agentic_trader.risk import RiskManager
 from nse_agentic_trader.risk.state import RiskStateStore
 from nse_agentic_trader.reports import build_journal_report
@@ -392,6 +393,21 @@ def run_premarket() -> None:
         print(line)
 
 
+def run_postmarket(args) -> None:
+    settings = load_settings()
+    report_date = args.date.date() if args.date else date.today()
+    report = build_journal_report(args.journal_path or settings.journal_path, report_date)
+    risk_state = RiskStateStore(settings.risk_state_path).load()
+    summary = build_postmarket_summary(report, risk_state, report_date)
+    text = summary.as_markdown()
+    if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(text, encoding="utf-8")
+        print(f"Wrote post-market summary to {args.output}")
+    else:
+        print(text, end="")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="NSE agentic trader starter")
     subparsers = parser.add_subparsers(dest="command")
@@ -450,6 +466,11 @@ def main() -> None:
 
     subparsers.add_parser("premarket", help="Run daily pre-market safety checklist")
 
+    postmarket_parser = subparsers.add_parser("postmarket", help="Build an end-of-day journal and risk summary")
+    postmarket_parser.add_argument("--journal-path", type=Path)
+    postmarket_parser.add_argument("--date", type=lambda value: datetime.strptime(value, "%Y-%m-%d"))
+    postmarket_parser.add_argument("--output", type=Path, help="Optional Markdown output path")
+
     _add_run_args(parser)
     args = parser.parse_args()
     if args.command in (None, "run"):
@@ -499,6 +520,9 @@ def main() -> None:
         return
     if args.command == "premarket":
         run_premarket()
+        return
+    if args.command == "postmarket":
+        run_postmarket(args)
         return
     parser.print_help()
 
