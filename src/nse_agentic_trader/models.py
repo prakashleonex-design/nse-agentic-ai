@@ -56,6 +56,8 @@ class TradeSignal:
     strategy_family: StrategyFamily | None = None
     invalidation: str = ""
     expected_holding_minutes: int | None = None
+    blocked_by_filters: bool = False
+    filter_reasons: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

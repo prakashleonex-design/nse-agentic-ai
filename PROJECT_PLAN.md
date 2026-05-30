@@ -12,6 +12,10 @@ The system must support these strategy families as first-class modules:
 - Option selling.
 - Trend following.
 - Mean reversion.
+- VWAP pullback.
+- Trend continuation.
+- Failed breakout / reversal.
+- Avoid-trade filters for choppy markets, low volume, news/spike candles, and late entries.
 
 Every strategy family must produce structured trade ideas with instrument, direction, entry, stop loss, target, confidence, invalidation condition, expected holding time, and reason. The AI layer reviews and challenges those ideas; it does not invent uncontrolled orders.
 
@@ -58,6 +62,13 @@ Every strategy family must produce structured trade ideas with instrument, direc
 - Default instrument: index option buying.
 - Required controls: reject late entries, reject false-break risk when candle body is weak, mandatory stop below/above breakout structure.
 
+### VWAP Pullback
+
+- Purpose: enter after price pulls back toward VWAP while trend remains intact.
+- Inputs: VWAP, trend slope, reclaim/rejection candle, volume, spread filter.
+- Default instrument: ATM or slightly ITM option buying.
+- Required controls: reject flat VWAP, reject low volume, stop beyond VWAP/pullback extreme.
+
 ### Option Buying
 
 - Purpose: directional defined-risk trades using CE/PE contracts.
@@ -79,12 +90,32 @@ Every strategy family must produce structured trade ideas with instrument, direc
 - Default instrument: option buying or futures/index proxy in paper.
 - Required controls: avoid chop, trail stops, reduce size after extended move, exit near end of day.
 
+### Trend Continuation
+
+- Purpose: enter a formed trend after a shallow pause or continuation trigger.
+- Inputs: moving-average alignment, slope, pullback depth, continuation candle.
+- Default instrument: option buying.
+- Required controls: avoid extended entries, use trailing stop, reject late-day entries.
+
 ### Mean Reversion
 
 - Purpose: fade stretched moves back toward VWAP or range mean when market conditions support it.
 - Inputs: distance from VWAP, RSI/oscillator, volatility bands, support/resistance, rejection candles.
 - Default instrument: option buying in the reversal direction for capped risk.
 - Required controls: only trade in non-trending regime, hard stop beyond extreme, reject against strong trend days.
+
+### Failed Breakout / Reversal
+
+- Purpose: fade failed breaks when price returns back inside a reference range.
+- Inputs: opening range, prior high/low, failed close, rejection candle, volume behavior.
+- Default instrument: option buying in the reversal direction.
+- Required controls: stop beyond failed breakout extreme, avoid news-spike candles, reject repeated whipsaw.
+
+### Avoid-Trade Filters
+
+- Purpose: block low-quality environments before the reviewer/risk/order path.
+- Filters: choppy market, low volume, news/spike candle, late entry.
+- Behavior: blocked trade ideas are journaled with filter reasons and no order is placed.
 
 ## Phase 4: Agent Workflow
 
@@ -114,7 +145,8 @@ Every strategy family must produce structured trade ideas with instrument, direc
    - Add transaction costs and realized/unrealized P&L reporting.
 3. Build the strategy framework:
    - Common strategy interface and strategy registry are in place.
-   - CLI selection is in place for scalping, breakout, option buying, option selling, trend following, and mean reversion starter modules.
+   - CLI selection is in place for scalping, breakout, VWAP pullback, option buying, option selling, trend following, trend continuation, mean reversion, and failed breakout/reversal starter modules.
+   - Avoid-trade filters are in place for choppy, low-volume, news/spike, and late-entry blocks.
    - Journal tags are in place; per-strategy paper metrics still need aggregation.
 4. Strengthen risk:
    - Add explicit kill switch state persisted to disk.

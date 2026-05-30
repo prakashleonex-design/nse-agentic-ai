@@ -7,9 +7,10 @@ from nse_agentic_trader.agent import TradeReviewer
 from nse_agentic_trader.broker import PaperBroker
 from nse_agentic_trader.broker.angel import AngelSmartApiBroker
 from nse_agentic_trader.config import load_settings
+from nse_agentic_trader.filters import AvoidTradeFilterEngine, apply_filter_block
 from nse_agentic_trader.instruments import AngelInstrumentMaster, OptionQuery, ensure_instrument_master
 from nse_agentic_trader.journal import Journal
-from nse_agentic_trader.models import MarketSnapshot, OptionContract, OptionType, OrderRequest, Side, SignalAction, TradeSignal
+from nse_agentic_trader.models import MarketSnapshot, OptionContract, OptionType, OrderRequest, RiskDecision, Side, SignalAction, TradeSignal
 from nse_agentic_trader.risk import RiskManager
 from nse_agentic_trader.strategy import available_strategy_names, build_strategy
 
@@ -55,6 +56,7 @@ def run_once(
     settings = load_settings()
     broker = build_broker(mode)
     strategy = build_strategy(strategy_name)
+    filters = AvoidTradeFilterEngine()
     risk_manager = RiskManager(settings)
     reviewer = TradeReviewer()
     journal = Journal(settings.journal_path)
@@ -66,9 +68,18 @@ def run_once(
         )
 
     for bar in sample_bars(symbol):
+        filters.on_bar(bar)
         signal = strategy.on_bar(bar)
         if signal.action == SignalAction.WAIT:
             continue
+        filter_decision = filters.evaluate(signal, bar)
+        if filter_decision.blocked:
+            blocked_signal = apply_filter_block(signal, filter_decision)
+            risk = RiskDecision(False, 0, "Avoid-trade filters blocked this setup")
+            review = reviewer.review(blocked_signal, risk)
+            journal.write(blocked_signal, risk, review, None)
+            print(review.summary)
+            break
 
         order_signal, contract = _option_signal_if_available(signal, bar.close, option_strike, option_expiry, settings.instrument_master_cache)
         lot_size = contract.instrument.lot_size if contract else 1

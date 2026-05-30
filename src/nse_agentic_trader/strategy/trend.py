@@ -71,3 +71,15 @@ class TrendFollowingStrategy:
             )
 
         return wait_signal(bar.symbol, "No clean trend alignment", self.spec.name, self.spec.family)
+
+
+class TrendContinuationStrategy(TrendFollowingStrategy):
+    spec = StrategySpec(
+        name="trend_continuation",
+        family=StrategyFamily.TREND_FOLLOWING,
+        description="Continuation variant that enters when a formed trend resumes after a shallow pause.",
+        enabled_by_default=False,
+    )
+
+    def __init__(self) -> None:
+        super().__init__(fast=4, slow=10, rr=1.5)

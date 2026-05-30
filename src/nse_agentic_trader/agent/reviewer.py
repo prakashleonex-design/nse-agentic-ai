@@ -25,6 +25,8 @@ class TradeReviewer:
             concerns.append("Trade has no explicit invalidation condition")
         if signal.strategy_family and signal.strategy_family.value == "option_selling":
             concerns.append("Option selling is research/paper-only until additional controls exist")
+        if signal.blocked_by_filters:
+            concerns.extend(signal.filter_reasons)
 
         approved = risk.approved and not concerns
         strategy_label = signal.strategy_name or "unclassified_strategy"

@@ -71,11 +71,21 @@ python -m nse_agentic_trader.app --mode paper --symbol NIFTY --strategy opening_
 Available starter strategy names:
 
 - `opening_range_breakout`
+- `vwap_pullback`
 - `scalping_momentum`
 - `option_buying`
 - `option_selling`
 - `trend_following`
+- `trend_continuation`
 - `mean_reversion`
+- `failed_breakout_reversal`
+
+Avoid-trade filters run before risk/execution and can block setups for:
+
+- Choppy market conditions.
+- Low volume.
+- News/spike candles.
+- Late entries.
 
 ## Angel SmartAPI Setup
 
@@ -138,3 +148,4 @@ Paper option orders now require a reference price, enforce lot-size multiples wh
 - Live orders require an explicit environment flag.
 - Every signal, rejection, and fill is journaled.
 - Option selling remains paper-only until explicit future approval and additional risk systems exist.
+- Avoid-trade filters can block otherwise valid strategy signals before order placement.

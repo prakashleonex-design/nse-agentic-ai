@@ -4,11 +4,13 @@ from collections.abc import Callable
 
 from nse_agentic_trader.models import StrategyFamily
 from nse_agentic_trader.strategy.base import Strategy
+from nse_agentic_trader.strategy.failed_breakout import FailedBreakoutReversalStrategy
 from nse_agentic_trader.strategy.mean_reversion import MeanReversionStrategy
 from nse_agentic_trader.strategy.momentum import ScalpingMomentumStrategy
 from nse_agentic_trader.strategy.opening_range import OpeningRangeBreakout
 from nse_agentic_trader.strategy.options import OptionBuyingStrategy, OptionSellingStrategy
-from nse_agentic_trader.strategy.trend import TrendFollowingStrategy
+from nse_agentic_trader.strategy.trend import TrendContinuationStrategy, TrendFollowingStrategy
+from nse_agentic_trader.strategy.vwap import VwapPullbackStrategy
 
 
 StrategyFactory = Callable[[], Strategy]
@@ -16,10 +18,13 @@ StrategyFactory = Callable[[], Strategy]
 
 _REGISTRY: dict[str, StrategyFactory] = {
     OpeningRangeBreakout.spec.name: OpeningRangeBreakout,
+    VwapPullbackStrategy.spec.name: VwapPullbackStrategy,
+    FailedBreakoutReversalStrategy.spec.name: FailedBreakoutReversalStrategy,
     ScalpingMomentumStrategy.spec.name: ScalpingMomentumStrategy,
     OptionBuyingStrategy.spec.name: OptionBuyingStrategy,
     OptionSellingStrategy.spec.name: OptionSellingStrategy,
     TrendFollowingStrategy.spec.name: TrendFollowingStrategy,
+    TrendContinuationStrategy.spec.name: TrendContinuationStrategy,
     MeanReversionStrategy.spec.name: MeanReversionStrategy,
 }
 
