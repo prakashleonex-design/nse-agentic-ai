@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nse-agentic-trader"
+version = "0.1.0"
+description = "Conservative agentic trading assistant scaffold for NSE intraday trading with Angel SmartAPI"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+angel = ["smartapi-python>=1.5.5", "pyotp>=2.9"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+nse-agentic-trader = "nse_agentic_trader.app:main"

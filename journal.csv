@@ -1,0 +1,2 @@
+timestamp,symbol,action,side,entry,stop_loss,target,confidence,risk_approved,quantity,agent_approved,summary,order_id,order_message
+2026-05-30T16:38:29,NIFTY,ENTER_LONG,BUY,22509.400000000023,22498.0,22526.50000000006,0.62,True,50,True,"ENTER_LONG NIFTY: Close broke above opening range high. Risk decision: Risk approved, quantity=50.",PAPER-000001,Paper order accepted
