@@ -140,7 +140,8 @@ Every strategy family must produce structured trade ideas with instrument, direc
    - Cache validation reports file age, contract count, token, lot size, tick size, and expiry.
    - Add tests for weekly/monthly expiry parsing as Angel formats evolve.
 2. Improve paper trading:
-   - Feed real option LTP bars instead of estimating premiums from index spot.
+   - CSV candle replay and guarded Angel historical candle provider are in place.
+   - Feed real option LTP bars into option strategy execution instead of estimating premiums from index spot.
    - Simulate stop/target exits conservatively when both hit inside the same candle.
    - Add transaction costs and realized/unrealized P&L reporting.
 3. Build the strategy framework:

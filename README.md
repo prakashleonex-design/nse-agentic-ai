@@ -68,6 +68,26 @@ The newer command form is:
 python -m nse_agentic_trader.app run --mode paper --symbol NIFTY --strategy opening_range_breakout
 ```
 
+Replay candles from CSV:
+
+```powershell
+python -m nse_agentic_trader.app run --mode paper --symbol NIFTY --strategy opening_range_breakout --data-source csv --csv-path .\data\nifty_1m.csv
+```
+
+CSV columns:
+
+```text
+timestamp,symbol,open,high,low,close,volume
+```
+
+Fetch historical candles from Angel SmartAPI after credentials are configured:
+
+```powershell
+python -m nse_agentic_trader.app run --mode paper --symbol NIFTY --strategy opening_range_breakout --data-source angel --data-exchange NFO --data-token 56978 --from-date "2026-05-30 09:15" --to-date "2026-05-30 15:30"
+```
+
+Angel candle fetches are market-data only; they do not enable live orders.
+
 Run a specific strategy:
 
 ```powershell

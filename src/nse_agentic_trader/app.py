@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from nse_agentic_trader.agent import TradeReviewer
 from nse_agentic_trader.broker import PaperBroker
@@ -10,6 +11,7 @@ from nse_agentic_trader.config import load_settings
 from nse_agentic_trader.filters import AvoidTradeFilterEngine, apply_filter_block
 from nse_agentic_trader.instruments import AngelInstrumentMaster, OptionQuery, ensure_instrument_master, instrument_master_info
 from nse_agentic_trader.journal import Journal
+from nse_agentic_trader.market_data import AngelHistoricalCandleProvider, CsvCandleProvider
 from nse_agentic_trader.models import MarketSnapshot, OptionContract, OptionType, OrderRequest, RiskDecision, Side, SignalAction, TradeSignal
 from nse_agentic_trader.risk import RiskManager
 from nse_agentic_trader.risk.state import RiskStateStore
@@ -53,6 +55,14 @@ def run_once(
     option_expiry: datetime | None = None,
     refresh_instruments: bool = False,
     strategy_name: str = "opening_range_breakout",
+    data_source: str = "sample",
+    csv_path=None,
+    from_date: datetime | None = None,
+    to_date: datetime | None = None,
+    interval: str = "ONE_MINUTE",
+    data_exchange: str = "NSE",
+    data_token: str | None = None,
+    data_option_type: OptionType = OptionType.CE,
 ) -> None:
     settings = load_settings()
     broker = build_broker(mode)
@@ -68,7 +78,22 @@ def run_once(
             settings.instrument_master_max_age_hours,
         )
 
-    for bar in sample_bars(symbol):
+    bars = _load_bars(
+        settings,
+        symbol,
+        data_source,
+        csv_path,
+        from_date,
+        to_date,
+        interval,
+        data_exchange,
+        data_token,
+        data_option_type,
+        option_strike,
+        option_expiry,
+    )
+
+    for bar in bars:
         filters.on_bar(bar)
         signal = strategy.on_bar(bar)
         if signal.action == SignalAction.WAIT:
@@ -163,6 +188,55 @@ def _estimate_option_premium(option_type: OptionType, spot_price: float, strike:
     return round(max(50.0, intrinsic + spot_price * 0.004), 2)
 
 
+def _load_bars(
+    settings,
+    symbol: str,
+    data_source: str,
+    csv_path,
+    from_date: datetime | None,
+    to_date: datetime | None,
+    interval: str,
+    data_exchange: str,
+    data_token: str | None,
+    data_option_type: OptionType,
+    option_strike: float | None,
+    option_expiry: datetime | None,
+) -> list[MarketSnapshot]:
+    if data_source == "sample":
+        return sample_bars(symbol)
+    if data_source == "csv":
+        if csv_path is None:
+            raise SystemExit("--csv-path is required when --data-source csv")
+        return list(CsvCandleProvider(csv_path, symbol).candles())
+    if data_source == "angel":
+        if from_date is None or to_date is None:
+            raise SystemExit("--from-date and --to-date are required when --data-source angel")
+        exchange = data_exchange
+        token = data_token
+        candle_symbol = symbol
+        if token is None and option_strike is not None:
+            contract = AngelInstrumentMaster(settings.instrument_master_cache).find_index_option(
+                OptionQuery(symbol, data_option_type, option_strike, option_expiry)
+            )
+            exchange = contract.instrument.exchange
+            token = contract.instrument.token
+            candle_symbol = contract.instrument.trading_symbol
+        if token is None:
+            raise SystemExit("--data-token is required for Angel candles unless --option-strike maps to a cached option contract")
+        return list(
+            AngelHistoricalCandleProvider(
+                settings,
+                candle_symbol,
+                exchange,
+                token,
+                interval,
+                from_date,
+                to_date,
+            ).candles()
+        )
+    raise SystemExit(f"Unknown data source: {data_source}")
+
+
 def validate_instrument(
     symbol: str,
     option_type: OptionType,
@@ -246,7 +320,22 @@ def main() -> None:
     _add_run_args(parser)
     args = parser.parse_args()
     if args.command in (None, "run"):
-        run_once(args.symbol, args.mode, args.option_strike, args.option_expiry, args.refresh_instruments, args.strategy)
+        run_once(
+            args.symbol,
+            args.mode,
+            args.option_strike,
+            args.option_expiry,
+            args.refresh_instruments,
+            args.strategy,
+            args.data_source,
+            args.csv_path,
+            args.from_date,
+            args.to_date,
+            args.interval,
+            args.data_exchange,
+            args.data_token,
+            OptionType(args.data_option_type),
+        )
         return
     if args.command == "instruments" and args.instrument_command == "validate":
         validate_instrument(args.symbol, OptionType(args.option_type), args.strike, args.expiry, args.refresh_instruments)
@@ -269,6 +358,14 @@ def _add_run_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--option-strike", type=float, help="NIFTY/BANKNIFTY option strike to paper trade")
     parser.add_argument("--option-expiry", type=lambda value: datetime.strptime(value, "%Y-%m-%d"))
     parser.add_argument("--refresh-instruments", action="store_true", help="Download/cache Angel instrument master before lookup")
+    parser.add_argument("--data-source", choices=["sample", "csv", "angel"], default="sample")
+    parser.add_argument("--csv-path", type=Path, help="CSV candle file with timestamp,open,high,low,close,volume columns")
+    parser.add_argument("--from-date", type=lambda value: datetime.strptime(value, "%Y-%m-%d %H:%M"))
+    parser.add_argument("--to-date", type=lambda value: datetime.strptime(value, "%Y-%m-%d %H:%M"))
+    parser.add_argument("--interval", default="ONE_MINUTE", help="Angel candle interval, e.g. ONE_MINUTE")
+    parser.add_argument("--data-exchange", default="NSE", help="Exchange for Angel candle data")
+    parser.add_argument("--data-token", help="Angel symbol token for historical candle data")
+    parser.add_argument("--data-option-type", choices=[item.value for item in OptionType], default=OptionType.CE.value)
     parser.add_argument(
         "--strategy",
         choices=available_strategy_names(),
