@@ -136,8 +136,8 @@ Every strategy family must produce structured trade ideas with instrument, direc
 ## Immediate Development Roadmap
 
 1. Finish instrument workflows:
-   - Add `instruments validate` CLI for NIFTY/BANKNIFTY contracts.
-   - Cache refresh should report file age and contract count.
+   - `instruments validate` CLI is in place for NIFTY/BANKNIFTY contracts.
+   - Cache validation reports file age, contract count, token, lot size, tick size, and expiry.
    - Add tests for weekly/monthly expiry parsing as Angel formats evolve.
 2. Improve paper trading:
    - Feed real option LTP bars instead of estimating premiums from index spot.
@@ -149,10 +149,11 @@ Every strategy family must produce structured trade ideas with instrument, direc
    - Avoid-trade filters are in place for choppy, low-volume, news/spike, and late-entry blocks.
    - Journal tags are in place; per-strategy paper metrics still need aggregation.
 4. Strengthen risk:
-   - Add explicit kill switch state persisted to disk.
+   - Explicit kill switch state is persisted to disk.
    - Enforce lot-size-aware quantity sizing before broker submission.
    - Add symbol-level exposure caps for NIFTY and BANKNIFTY.
    - Add stricter rules for option selling: paper-only, margin-aware, and defined-risk first.
+   - Add confirmation workflow before resetting a live kill switch.
 5. Build assistant workflow:
    - Make the reviewer return structured approval, objections, and checklist items.
    - Add a daily pre-market checklist and post-market journal summary.

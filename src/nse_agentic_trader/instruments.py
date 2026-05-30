@@ -23,6 +23,15 @@ class OptionQuery:
     expiry: datetime | None = None
 
 
+@dataclass(frozen=True)
+class InstrumentMasterInfo:
+    path: Path
+    exists: bool
+    modified_at: datetime | None
+    age_hours: float | None
+    instrument_count: int
+
+
 class AngelInstrumentMaster:
     def __init__(self, cache_path: Path) -> None:
         self.cache_path = cache_path
@@ -90,6 +99,18 @@ def ensure_instrument_master(url: str, cache_path: Path, max_age_hours: int) -> 
         if datetime.now() - modified <= timedelta(hours=max_age_hours):
             return cache_path
     return refresh_instrument_master(url, cache_path)
+
+
+def instrument_master_info(cache_path: Path) -> InstrumentMasterInfo:
+    if not cache_path.exists():
+        return InstrumentMasterInfo(cache_path, False, None, None, 0)
+    modified = datetime.fromtimestamp(cache_path.stat().st_mtime)
+    age_hours = (datetime.now() - modified).total_seconds() / 3600
+    try:
+        count = len(_read_json(cache_path))
+    except (json.JSONDecodeError, ValueError):
+        count = 0
+    return InstrumentMasterInfo(cache_path, True, modified, age_hours, count)
 
 
 def _read_json(path: Path) -> list[dict[str, object]]:

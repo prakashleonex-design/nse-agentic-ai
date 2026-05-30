@@ -62,6 +62,12 @@ pip install -e .
 python -m nse_agentic_trader.app --mode paper --symbol NIFTY
 ```
 
+The newer command form is:
+
+```powershell
+python -m nse_agentic_trader.app run --mode paper --symbol NIFTY --strategy opening_range_breakout
+```
+
 Run a specific strategy:
 
 ```powershell
@@ -139,6 +145,24 @@ python -m nse_agentic_trader.app --mode paper --symbol NIFTY --option-strike 225
 If the cache is missing or the contract cannot be found, the app falls back to the original index-symbol paper sample instead of attempting any live action.
 
 Paper option orders now require a reference price, enforce lot-size multiples when a contract is mapped, apply configurable slippage, track positions, and can simulate conservative stop/target exits from candle highs and lows.
+
+Validate an Angel option contract before using it:
+
+```powershell
+python -m nse_agentic_trader.app instruments validate --symbol NIFTY --option-type CE --strike 22500 --expiry 2026-06-04 --refresh-instruments
+```
+
+## Risk State And Kill Switch
+
+Risk state is persisted locally so trade count and kill-switch state survive process restarts:
+
+```powershell
+python -m nse_agentic_trader.app risk status
+python -m nse_agentic_trader.app risk kill --reason "Manual stop for the day"
+python -m nse_agentic_trader.app risk reset
+```
+
+`risk reset` is intended for paper/development use. A live workflow should require stronger manual confirmation before resetting a kill switch.
 
 ## Safety Rules
 

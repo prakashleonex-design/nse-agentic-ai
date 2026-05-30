@@ -31,6 +31,7 @@ class Settings:
     max_qty: int = 50
     risk_per_trade: float = 1000.0
     journal_path: Path = Path("journal.csv")
+    risk_state_path: Path = Path("data/risk_state.json")
 
     @property
     def live_orders_enabled(self) -> bool:
@@ -63,6 +64,7 @@ def load_settings() -> Settings:
         max_qty=int(values.get("MAX_QTY", 50)),
         risk_per_trade=float(values.get("RISK_PER_TRADE", 1000)),
         journal_path=Path(values.get("JOURNAL_PATH", "journal.csv")),
+        risk_state_path=Path(values.get("RISK_STATE_PATH", "data/risk_state.json")),
     )
 
 

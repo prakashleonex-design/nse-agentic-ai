@@ -8,10 +8,11 @@ from nse_agentic_trader.broker import PaperBroker
 from nse_agentic_trader.broker.angel import AngelSmartApiBroker
 from nse_agentic_trader.config import load_settings
 from nse_agentic_trader.filters import AvoidTradeFilterEngine, apply_filter_block
-from nse_agentic_trader.instruments import AngelInstrumentMaster, OptionQuery, ensure_instrument_master
+from nse_agentic_trader.instruments import AngelInstrumentMaster, OptionQuery, ensure_instrument_master, instrument_master_info
 from nse_agentic_trader.journal import Journal
 from nse_agentic_trader.models import MarketSnapshot, OptionContract, OptionType, OrderRequest, RiskDecision, Side, SignalAction, TradeSignal
 from nse_agentic_trader.risk import RiskManager
+from nse_agentic_trader.risk.state import RiskStateStore
 from nse_agentic_trader.strategy import available_strategy_names, build_strategy
 
 
@@ -162,8 +163,107 @@ def _estimate_option_premium(option_type: OptionType, spot_price: float, strike:
     return round(max(50.0, intrinsic + spot_price * 0.004), 2)
 
 
+def validate_instrument(
+    symbol: str,
+    option_type: OptionType,
+    strike: float,
+    expiry: datetime | None,
+    refresh_instruments: bool,
+) -> None:
+    settings = load_settings()
+    if refresh_instruments:
+        ensure_instrument_master(
+            settings.instrument_master_url,
+            settings.instrument_master_cache,
+            settings.instrument_master_max_age_hours,
+        )
+    info = instrument_master_info(settings.instrument_master_cache)
+    if not info.exists:
+        raise SystemExit(f"Instrument cache missing at {info.path}. Run with --refresh-instruments.")
+    contract = AngelInstrumentMaster(settings.instrument_master_cache).find_index_option(
+        OptionQuery(symbol, option_type, strike, expiry)
+    )
+    print(f"Cache: {info.path}")
+    print(f"Cache age hours: {info.age_hours:.2f}" if info.age_hours is not None else "Cache age hours: unknown")
+    print(f"Instrument count: {info.instrument_count}")
+    print(f"Trading symbol: {contract.instrument.trading_symbol}")
+    print(f"Token: {contract.instrument.token}")
+    print(f"Exchange: {contract.instrument.exchange}")
+    print(f"Expiry: {contract.expiry.date().isoformat()}")
+    print(f"Strike: {contract.strike:g}")
+    print(f"Option type: {contract.option_type.value}")
+    print(f"Lot size: {contract.instrument.lot_size}")
+    print(f"Tick size: {contract.instrument.tick_size}")
+
+
+def risk_status() -> None:
+    settings = load_settings()
+    state = RiskStateStore(settings.risk_state_path).load()
+    print(f"Risk state: {settings.risk_state_path}")
+    print(f"Date: {state.trade_date}")
+    print(f"Trades today: {state.trades_today}")
+    print(f"Realized P&L: {state.realized_pnl:.2f}")
+    print(f"Kill switch: {'ON' if state.kill_switch else 'OFF'}")
+    if state.kill_reason:
+        print(f"Kill reason: {state.kill_reason}")
+
+
+def risk_kill(reason: str) -> None:
+    settings = load_settings()
+    state = RiskStateStore(settings.risk_state_path).kill(reason)
+    print(f"Kill switch ON: {state.kill_reason}")
+
+
+def risk_reset() -> None:
+    settings = load_settings()
+    state = RiskStateStore(settings.risk_state_path).reset()
+    print(f"Risk state reset for {state.trade_date}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="NSE agentic trader starter")
+    subparsers = parser.add_subparsers(dest="command")
+
+    run_parser = subparsers.add_parser("run", help="Run one paper/live strategy pass")
+    _add_run_args(run_parser)
+
+    instruments_parser = subparsers.add_parser("instruments", help="Instrument master utilities")
+    instrument_subparsers = instruments_parser.add_subparsers(dest="instrument_command")
+    validate_parser = instrument_subparsers.add_parser("validate", help="Validate an NSE index option contract")
+    validate_parser.add_argument("--symbol", required=True, choices=["NIFTY", "BANKNIFTY"])
+    validate_parser.add_argument("--option-type", required=True, choices=[item.value for item in OptionType])
+    validate_parser.add_argument("--strike", required=True, type=float)
+    validate_parser.add_argument("--expiry", type=lambda value: datetime.strptime(value, "%Y-%m-%d"))
+    validate_parser.add_argument("--refresh-instruments", action="store_true")
+
+    risk_parser = subparsers.add_parser("risk", help="Risk state and kill-switch utilities")
+    risk_subparsers = risk_parser.add_subparsers(dest="risk_command")
+    risk_subparsers.add_parser("status", help="Show current risk state")
+    kill_parser = risk_subparsers.add_parser("kill", help="Turn on the kill switch")
+    kill_parser.add_argument("--reason", default="Manual kill switch")
+    risk_subparsers.add_parser("reset", help="Reset today's paper risk state")
+
+    _add_run_args(parser)
+    args = parser.parse_args()
+    if args.command in (None, "run"):
+        run_once(args.symbol, args.mode, args.option_strike, args.option_expiry, args.refresh_instruments, args.strategy)
+        return
+    if args.command == "instruments" and args.instrument_command == "validate":
+        validate_instrument(args.symbol, OptionType(args.option_type), args.strike, args.expiry, args.refresh_instruments)
+        return
+    if args.command == "risk" and args.risk_command == "status":
+        risk_status()
+        return
+    if args.command == "risk" and args.risk_command == "kill":
+        risk_kill(args.reason)
+        return
+    if args.command == "risk" and args.risk_command == "reset":
+        risk_reset()
+        return
+    parser.print_help()
+
+
+def _add_run_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--symbol", default="NIFTY", help="Trading symbol label")
     parser.add_argument("--mode", choices=["paper", "live"], default="paper")
     parser.add_argument("--option-strike", type=float, help="NIFTY/BANKNIFTY option strike to paper trade")
@@ -175,8 +275,6 @@ def main() -> None:
         default="opening_range_breakout",
         help="Strategy module to run",
     )
-    args = parser.parse_args()
-    run_once(args.symbol, args.mode, args.option_strike, args.option_expiry, args.refresh_instruments, args.strategy)
 
 
 if __name__ == "__main__":
