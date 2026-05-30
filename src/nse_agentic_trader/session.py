@@ -34,6 +34,13 @@ class SessionSummary:
     def realized_pnl(self) -> float:
         return self.gross_realized_pnl
 
+    @property
+    def win_rate(self) -> float:
+        closed_trades = self.winning_exits + self.losing_exits
+        if closed_trades == 0:
+            return 0.0
+        return round((self.winning_exits / closed_trades) * 100, 2)
+
 
 def load_bars(
     settings: Settings,
@@ -112,7 +119,10 @@ def run_paper_session(
     map_options: bool = True,
     apply_filters: bool = True,
 ) -> SessionSummary:
-    broker = PaperBroker(settings.paper_option_slippage_bps, settings.paper_option_min_slippage)
+    if map_options:
+        broker = PaperBroker(settings.paper_option_slippage_bps, settings.paper_option_min_slippage)
+    else:
+        broker = PaperBroker(settings.paper_underlying_slippage_bps, settings.paper_underlying_min_slippage)
     strategy = build_strategy(strategy_name)
     filters = AvoidTradeFilterEngine()
     risk_manager = RiskManager(settings)

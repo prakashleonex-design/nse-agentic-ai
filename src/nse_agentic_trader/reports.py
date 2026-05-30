@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 
+from nse_agentic_trader.session import SessionSummary
+
 
 @dataclass(frozen=True)
 class JournalReport:
@@ -78,6 +80,50 @@ def build_journal_report(path: Path, report_date: date | None = None) -> Journal
         filter_blocks=filter_blocks,
         total_quantity=total_quantity,
         verdicts=verdicts,
+    )
+
+
+def build_backtest_report(
+    summary: SessionSummary,
+    symbol: str,
+    strategy: str,
+    data_source: str,
+    mode: str = "paper",
+) -> str:
+    return "\n".join(
+        [
+            "# Backtest Report",
+            "",
+            f"- Mode: {mode}",
+            f"- Symbol: {symbol}",
+            f"- Strategy: {strategy}",
+            f"- Data source: {data_source}",
+            "",
+            "## Execution",
+            "",
+            f"- Bars seen: {summary.bars_seen}",
+            f"- Signals seen: {summary.signals_seen}",
+            f"- Orders accepted: {summary.orders_accepted}",
+            f"- Exits: {summary.exits}",
+            "",
+            "## P&L",
+            "",
+            f"- Gross realized P&L: {summary.gross_realized_pnl:.2f}",
+            f"- Estimated costs: {summary.estimated_costs:.2f}",
+            f"- Net realized P&L: {summary.net_realized_pnl:.2f}",
+            "",
+            "## Trade Quality",
+            "",
+            f"- Winning exits: {summary.winning_exits}",
+            f"- Losing exits: {summary.losing_exits}",
+            f"- Win rate: {summary.win_rate:.2f}%",
+            "",
+            "## Safety Notes",
+            "",
+            "- This is a paper/backtest report, not a live-trading approval.",
+            "- Review journal entries, stop losses, filter blocks, and risk-state changes before considering live use.",
+            "",
+        ]
     )
 
 

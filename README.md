@@ -106,12 +106,22 @@ Replay a full candle set as a paper backtest/session:
 python -m nse_agentic_trader.app backtest --symbol NIFTY --strategy opening_range_breakout --data-source csv --csv-path .\data\nifty_1m.csv --max-entries 3
 ```
 
+Save a Markdown backtest report:
+
+```powershell
+python -m nse_agentic_trader.app backtest --symbol NIFTY --strategy opening_range_breakout --data-source csv --csv-path .\data\nifty_1m.csv --max-entries 3 --output .\reports\backtest-nifty.md
+```
+
 Use `--no-option-mapping` to test directly on the input symbol instead of mapping index signals to option contracts.
 Use `--no-filters` only for strategy mechanics tests where you intentionally want to bypass avoid-trade filters.
 
-Backtest summaries report gross realized P&L, estimated costs, net realized P&L, winning exits, and losing exits. Paper cost estimates are controlled by:
+Backtest summaries report gross realized P&L, estimated costs, net realized P&L, winning exits, losing exits, and win rate. Paper cost estimates are controlled by:
 
 ```text
+PAPER_OPTION_SLIPPAGE_BPS=8
+PAPER_OPTION_MIN_SLIPPAGE=0.05
+PAPER_UNDERLYING_SLIPPAGE_BPS=1
+PAPER_UNDERLYING_MIN_SLIPPAGE=0
 PAPER_BROKERAGE_PER_ORDER=20
 PAPER_TRANSACTION_COST_BPS=6
 ```

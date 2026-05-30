@@ -20,7 +20,7 @@ from nse_agentic_trader.models import MarketSnapshot, OptionContract, OptionType
 from nse_agentic_trader.postmarket import build_postmarket_summary
 from nse_agentic_trader.risk import RiskManager
 from nse_agentic_trader.risk.state import RiskStateStore
-from nse_agentic_trader.reports import build_journal_report
+from nse_agentic_trader.reports import build_backtest_report, build_journal_report
 from nse_agentic_trader.session import load_bars as load_session_bars
 from nse_agentic_trader.session import run_paper_session
 from nse_agentic_trader.strategy import available_strategy_names, build_strategy
@@ -360,6 +360,14 @@ def run_backtest(args) -> None:
     print(f"Gross realized P&L: {summary.gross_realized_pnl:.2f}")
     print(f"Estimated costs: {summary.estimated_costs:.2f}")
     print(f"Net realized P&L: {summary.net_realized_pnl:.2f}")
+    print(f"Win rate: {summary.win_rate:.2f}%")
+    if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(
+            build_backtest_report(summary, args.symbol, args.strategy, args.data_source, args.mode),
+            encoding="utf-8",
+        )
+        print(f"Wrote backtest report to {args.output}")
 
 
 def run_report(args) -> None:
@@ -463,6 +471,7 @@ def main() -> None:
     backtest_parser.add_argument("--max-entries", type=int, default=None)
     backtest_parser.add_argument("--no-option-mapping", action="store_true", help="Keep signals on the input symbol instead of mapping to options")
     backtest_parser.add_argument("--no-filters", action="store_true", help="Disable avoid-trade filters for strategy mechanics testing")
+    backtest_parser.add_argument("--output", type=Path, help="Optional Markdown backtest report path")
 
     instruments_parser = subparsers.add_parser("instruments", help="Instrument master utilities")
     instrument_subparsers = instruments_parser.add_subparsers(dest="instrument_command")

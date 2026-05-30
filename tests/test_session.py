@@ -47,3 +47,4 @@ def test_paper_session_processes_full_bars_and_records_exit(tmp_path):
     assert summary.net_realized_pnl == round(summary.gross_realized_pnl - 2, 2)
     assert summary.winning_exits == 1
     assert summary.losing_exits == 0
+    assert summary.win_rate == 100

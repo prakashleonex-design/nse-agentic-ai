@@ -1,6 +1,7 @@
 from datetime import date
 
-from nse_agentic_trader.reports import build_journal_report
+from nse_agentic_trader.reports import build_backtest_report, build_journal_report
+from nse_agentic_trader.session import SessionSummary
 
 
 def test_journal_report_summarizes_modern_rows(tmp_path):
@@ -60,3 +61,26 @@ def test_journal_report_normalizes_new_rows_written_after_legacy_header(tmp_path
     assert report.actions["ENTER_LONG"] == 2
     assert report.strategies["opening_range_breakout"] == 1
     assert report.total_quantity == 125
+
+
+def test_build_backtest_report_includes_summary_and_safety_notes():
+    summary = SessionSummary(
+        bars_seen=100,
+        signals_seen=3,
+        orders_accepted=2,
+        exits=2,
+        gross_realized_pnl=500,
+        estimated_costs=80,
+        net_realized_pnl=420,
+        winning_exits=1,
+        losing_exits=1,
+    )
+
+    report = build_backtest_report(summary, "NIFTY", "opening_range_breakout", "csv")
+
+    assert "# Backtest Report" in report
+    assert "- Symbol: NIFTY" in report
+    assert "- Strategy: opening_range_breakout" in report
+    assert "- Net realized P&L: 420.00" in report
+    assert "- Win rate: 50.00%" in report
+    assert "not a live-trading approval" in report
