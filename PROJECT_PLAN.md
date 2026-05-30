@@ -144,7 +144,8 @@ Every strategy family must produce structured trade ideas with instrument, direc
    - Full candle-session paper replay is in place with entry count, exits, and realized P&L summary.
    - Feed real option LTP bars into option strategy execution instead of estimating premiums from index spot.
    - Simulate stop/target exits conservatively when both hit inside the same candle.
-   - Add transaction costs and realized/unrealized P&L reporting.
+   - Estimated transaction costs and gross/net realized P&L reporting are in place.
+   - Add unrealized P&L reporting for open positions.
 3. Build the strategy framework:
    - Common strategy interface and strategy registry are in place.
    - CLI selection is in place for scalping, breakout, VWAP pullback, option buying, option selling, trend following, trend continuation, mean reversion, and failed breakout/reversal starter modules.

@@ -334,7 +334,11 @@ def run_backtest(args) -> None:
     print(f"Signals seen: {summary.signals_seen}")
     print(f"Orders accepted: {summary.orders_accepted}")
     print(f"Exits: {summary.exits}")
-    print(f"Realized P&L: {summary.realized_pnl:.2f}")
+    print(f"Winning exits: {summary.winning_exits}")
+    print(f"Losing exits: {summary.losing_exits}")
+    print(f"Gross realized P&L: {summary.gross_realized_pnl:.2f}")
+    print(f"Estimated costs: {summary.estimated_costs:.2f}")
+    print(f"Net realized P&L: {summary.net_realized_pnl:.2f}")
 
 
 def main() -> None:

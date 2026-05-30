@@ -7,6 +7,7 @@ from pathlib import Path
 from nse_agentic_trader.agent import TradeReviewer
 from nse_agentic_trader.broker.paper import PaperBroker
 from nse_agentic_trader.config import Settings
+from nse_agentic_trader.costs import CostModel
 from nse_agentic_trader.filters import AvoidTradeFilterEngine, apply_filter_block
 from nse_agentic_trader.instruments import AngelInstrumentMaster, OptionQuery
 from nse_agentic_trader.journal import Journal
@@ -22,7 +23,15 @@ class SessionSummary:
     signals_seen: int
     orders_accepted: int
     exits: int
-    realized_pnl: float
+    gross_realized_pnl: float
+    estimated_costs: float
+    net_realized_pnl: float
+    winning_exits: int
+    losing_exits: int
+
+    @property
+    def realized_pnl(self) -> float:
+        return self.gross_realized_pnl
 
 
 def load_bars(
@@ -93,20 +102,30 @@ def run_paper_session(
     risk_manager = RiskManager(settings)
     reviewer = TradeReviewer()
     journal = Journal(settings.journal_path)
+    cost_model = CostModel(settings.paper_brokerage_per_order, settings.paper_transaction_cost_bps)
     active_contracts: dict[str, OptionContract] = {}
     signals_seen = 0
     orders_accepted = 0
     exits = 0
     last_realized_pnl = 0.0
+    estimated_costs = 0.0
+    winning_exits = 0
+    losing_exits = 0
 
     for bar in bars:
         filters.on_bar(bar)
         for exit_bar in _exit_bars_for_positions(bar, active_contracts, broker):
             for result in broker.simulate_intrabar_exits(exit_bar):
                 exits += 1
+                exit_fill = broker.fills[-1]
+                estimated_costs += cost_model.estimate_fill_cost(exit_fill)
                 pnl_delta = broker.realized_pnl - last_realized_pnl
                 last_realized_pnl = broker.realized_pnl
                 risk_manager.record_realized_pnl(pnl_delta)
+                if pnl_delta > 0:
+                    winning_exits += 1
+                elif pnl_delta < 0:
+                    losing_exits += 1
                 print(result.message)
 
         if _has_open_position(broker):
@@ -158,6 +177,7 @@ def run_paper_session(
             )
             order_result = broker.place_order(order)
             if order_result.accepted:
+                estimated_costs += cost_model.estimate_fill_cost(broker.fills[-1])
                 orders_accepted += 1
                 risk_manager.record_trade()
                 if contract:
@@ -170,7 +190,18 @@ def run_paper_session(
         if order_result:
             print(f"Order: {order_result.order_id} - {order_result.message}")
 
-    return SessionSummary(len(bars), signals_seen, orders_accepted, exits, broker.realized_pnl)
+    gross_realized_pnl = broker.realized_pnl
+    return SessionSummary(
+        bars_seen=len(bars),
+        signals_seen=signals_seen,
+        orders_accepted=orders_accepted,
+        exits=exits,
+        gross_realized_pnl=gross_realized_pnl,
+        estimated_costs=round(estimated_costs, 2),
+        net_realized_pnl=round(gross_realized_pnl - estimated_costs, 2),
+        winning_exits=winning_exits,
+        losing_exits=losing_exits,
+    )
 
 
 def _option_signal_if_available(

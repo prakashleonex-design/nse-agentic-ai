@@ -23,6 +23,8 @@ def test_paper_session_processes_full_bars_and_records_exit(tmp_path):
         risk_per_trade=100,
         paper_option_slippage_bps=0,
         paper_option_min_slippage=0,
+        paper_brokerage_per_order=1,
+        paper_transaction_cost_bps=0,
     )
 
     summary = run_paper_session(
@@ -40,4 +42,8 @@ def test_paper_session_processes_full_bars_and_records_exit(tmp_path):
     assert summary.bars_seen == len(bars)
     assert summary.orders_accepted == 1
     assert summary.exits == 1
-    assert summary.realized_pnl > 0
+    assert summary.gross_realized_pnl > 0
+    assert summary.estimated_costs == 2
+    assert summary.net_realized_pnl == round(summary.gross_realized_pnl - 2, 2)
+    assert summary.winning_exits == 1
+    assert summary.losing_exits == 0

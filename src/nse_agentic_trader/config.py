@@ -25,6 +25,8 @@ class Settings:
 
     paper_option_slippage_bps: float = 8.0
     paper_option_min_slippage: float = 0.05
+    paper_brokerage_per_order: float = 20.0
+    paper_transaction_cost_bps: float = 6.0
 
     max_daily_loss: float = 3000.0
     max_trades_per_day: int = 4
@@ -59,6 +61,8 @@ def load_settings() -> Settings:
         instrument_master_max_age_hours=int(values.get("INSTRUMENT_MASTER_MAX_AGE_HOURS", 24)),
         paper_option_slippage_bps=float(values.get("PAPER_OPTION_SLIPPAGE_BPS", 8)),
         paper_option_min_slippage=float(values.get("PAPER_OPTION_MIN_SLIPPAGE", 0.05)),
+        paper_brokerage_per_order=float(values.get("PAPER_BROKERAGE_PER_ORDER", 20)),
+        paper_transaction_cost_bps=float(values.get("PAPER_TRANSACTION_COST_BPS", 6)),
         max_daily_loss=float(values.get("MAX_DAILY_LOSS", 3000)),
         max_trades_per_day=int(values.get("MAX_TRADES_PER_DAY", 4)),
         max_qty=int(values.get("MAX_QTY", 50)),

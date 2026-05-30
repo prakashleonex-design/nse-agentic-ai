@@ -97,6 +97,13 @@ python -m nse_agentic_trader.app backtest --symbol NIFTY --strategy opening_rang
 Use `--no-option-mapping` to test directly on the input symbol instead of mapping index signals to option contracts.
 Use `--no-filters` only for strategy mechanics tests where you intentionally want to bypass avoid-trade filters.
 
+Backtest summaries report gross realized P&L, estimated costs, net realized P&L, winning exits, and losing exits. Paper cost estimates are controlled by:
+
+```text
+PAPER_BROKERAGE_PER_ORDER=20
+PAPER_TRANSACTION_COST_BPS=6
+```
+
 Run a specific strategy:
 
 ```powershell
