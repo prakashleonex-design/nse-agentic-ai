@@ -88,6 +88,15 @@ python -m nse_agentic_trader.app run --mode paper --symbol NIFTY --strategy open
 
 Angel candle fetches are market-data only; they do not enable live orders.
 
+Replay a full candle set as a paper backtest/session:
+
+```powershell
+python -m nse_agentic_trader.app backtest --symbol NIFTY --strategy opening_range_breakout --data-source csv --csv-path .\data\nifty_1m.csv --max-entries 3
+```
+
+Use `--no-option-mapping` to test directly on the input symbol instead of mapping index signals to option contracts.
+Use `--no-filters` only for strategy mechanics tests where you intentionally want to bypass avoid-trade filters.
+
 Run a specific strategy:
 
 ```powershell

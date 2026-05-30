@@ -15,6 +15,8 @@ from nse_agentic_trader.market_data import AngelHistoricalCandleProvider, CsvCan
 from nse_agentic_trader.models import MarketSnapshot, OptionContract, OptionType, OrderRequest, RiskDecision, Side, SignalAction, TradeSignal
 from nse_agentic_trader.risk import RiskManager
 from nse_agentic_trader.risk.state import RiskStateStore
+from nse_agentic_trader.session import load_bars as load_session_bars
+from nse_agentic_trader.session import run_paper_session
 from nse_agentic_trader.strategy import available_strategy_names, build_strategy
 
 
@@ -294,12 +296,59 @@ def risk_reset() -> None:
     print(f"Risk state reset for {state.trade_date}")
 
 
+def run_backtest(args) -> None:
+    settings = load_settings()
+    if args.refresh_instruments:
+        ensure_instrument_master(
+            settings.instrument_master_url,
+            settings.instrument_master_cache,
+            settings.instrument_master_max_age_hours,
+        )
+    bars = load_session_bars(
+        settings,
+        args.symbol,
+        args.data_source,
+        args.csv_path,
+        args.from_date,
+        args.to_date,
+        args.interval,
+        args.data_exchange,
+        args.data_token,
+        OptionType(args.data_option_type),
+        args.option_strike,
+        args.option_expiry,
+    )
+    summary = run_paper_session(
+        settings,
+        bars,
+        args.strategy,
+        args.symbol,
+        args.option_strike,
+        args.option_expiry,
+        args.max_entries,
+        not args.no_option_mapping,
+        not args.no_filters,
+    )
+    print("Backtest summary")
+    print(f"Bars seen: {summary.bars_seen}")
+    print(f"Signals seen: {summary.signals_seen}")
+    print(f"Orders accepted: {summary.orders_accepted}")
+    print(f"Exits: {summary.exits}")
+    print(f"Realized P&L: {summary.realized_pnl:.2f}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="NSE agentic trader starter")
     subparsers = parser.add_subparsers(dest="command")
 
     run_parser = subparsers.add_parser("run", help="Run one paper/live strategy pass")
     _add_run_args(run_parser)
+
+    backtest_parser = subparsers.add_parser("backtest", help="Replay candles through paper session simulation")
+    _add_run_args(backtest_parser)
+    backtest_parser.add_argument("--max-entries", type=int, default=None)
+    backtest_parser.add_argument("--no-option-mapping", action="store_true", help="Keep signals on the input symbol instead of mapping to options")
+    backtest_parser.add_argument("--no-filters", action="store_true", help="Disable avoid-trade filters for strategy mechanics testing")
 
     instruments_parser = subparsers.add_parser("instruments", help="Instrument master utilities")
     instrument_subparsers = instruments_parser.add_subparsers(dest="instrument_command")
@@ -336,6 +385,9 @@ def main() -> None:
             args.data_token,
             OptionType(args.data_option_type),
         )
+        return
+    if args.command == "backtest":
+        run_backtest(args)
         return
     if args.command == "instruments" and args.instrument_command == "validate":
         validate_instrument(args.symbol, OptionType(args.option_type), args.strike, args.expiry, args.refresh_instruments)

@@ -16,6 +16,7 @@ class PaperFill:
     quantity: int
     requested_price: float
     fill_price: float
+    realized_pnl: float = 0.0
 
 
 @dataclass
@@ -51,7 +52,7 @@ class PaperBroker:
         fill_price = self._fill_price(order.side, requested_price, order.tick_size)
         fill = PaperFill(datetime.now(), order_id, order.symbol, order.side, order.quantity, requested_price, fill_price)
         self.fills.append(fill)
-        self._apply_fill(fill, order.stop_loss, order.target)
+        fill.realized_pnl = self._apply_fill(fill, order.stop_loss, order.target)
         return OrderResult(True, order_id, f"Paper fill at {fill_price:.2f}")
 
     def simulate_intrabar_exits(self, bar: MarketSnapshot) -> list[OrderResult]:
@@ -83,12 +84,16 @@ class PaperBroker:
                 results.append(OrderResult(result.accepted, result.order_id, f"Paper exit on {reason}: {result.message}"))
         return results
 
+    @property
+    def realized_pnl(self) -> float:
+        return sum(position.realized_pnl for position in self.positions.values())
+
     def _fill_price(self, side: Side, reference_price: float, tick_size: float | None) -> float:
         slippage = max(reference_price * self.slippage_bps / 10000, self.min_slippage)
         raw = reference_price + slippage if side == Side.BUY else reference_price - slippage
         return _round_to_tick(raw, tick_size or 0.05)
 
-    def _apply_fill(self, fill: PaperFill, stop_loss: float | None, target: float | None) -> None:
+    def _apply_fill(self, fill: PaperFill, stop_loss: float | None, target: float | None) -> float:
         position = self.positions.setdefault(fill.symbol, PaperPosition(fill.symbol))
         signed_qty = fill.quantity if fill.side == Side.BUY else -fill.quantity
         old_qty = position.quantity
@@ -100,19 +105,21 @@ class PaperBroker:
             position.average_price = total_cost / new_qty
             position.stop_loss = stop_loss
             position.target = target
-            return
+            return 0.0
 
         if old_qty > 0 and signed_qty < 0:
             exit_qty = min(old_qty, fill.quantity)
-            position.realized_pnl += (fill.fill_price - position.average_price) * exit_qty
+            realized_pnl = (fill.fill_price - position.average_price) * exit_qty
+            position.realized_pnl += realized_pnl
             position.quantity = old_qty - exit_qty
             if position.quantity == 0:
                 position.average_price = 0.0
                 position.stop_loss = None
                 position.target = None
-            return
+            return realized_pnl
 
         position.quantity = new_qty
+        return 0.0
 
 
 def _round_to_tick(price: float, tick_size: float) -> float:
