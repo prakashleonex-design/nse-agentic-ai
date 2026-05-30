@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from nse_agentic_trader.config import Settings
+from nse_agentic_trader.execution import build_angel_order_params, validate_order_request
 from nse_agentic_trader.models import OrderRequest, OrderResult
 
 
@@ -29,25 +30,15 @@ class AngelSmartApiBroker:
         if not session.get("status"):
             raise RuntimeError(f"Angel login failed: {session}")
 
-    def place_order(self, order: OrderRequest) -> OrderResult:
+    def place_order(self, order: OrderRequest, manual_approval: bool = False) -> OrderResult:
+        validation = validate_order_request(order, self.settings, manual_approval)
+        if not validation.approved:
+            return OrderResult(False, None, "Live order validation failed: " + "; ".join(validation.reasons))
         if not self.settings.live_orders_enabled:
             return OrderResult(False, None, "Live order blocked by configuration")
         if self.client is None:
             self.connect()
 
-        params = {
-            "variety": self.settings.default_order_variety,
-            "tradingsymbol": order.symbol,
-            "symboltoken": order.symboltoken or "",
-            "transactiontype": order.side.value,
-            "exchange": order.exchange or self.settings.default_exchange,
-            "ordertype": order.order_type,
-            "producttype": order.product_type,
-            "duration": "DAY",
-            "price": order.price or "0",
-            "squareoff": "0",
-            "stoploss": "0",
-            "quantity": str(order.quantity),
-        }
+        params = build_angel_order_params(order, self.settings)
         result = self.client.placeOrder(params)
         return OrderResult(True, str(result), "Live Angel order submitted")

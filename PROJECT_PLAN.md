@@ -162,8 +162,9 @@ Every strategy family must produce structured trade ideas with instrument, direc
    - Journal summary command is in place for decision/order review.
    - Add a daily pre-market checklist and richer post-market AI narrative summary.
 6. Live readiness gates:
-   - Add dry-run Angel order payload validation.
-   - Add manual approval prompts.
+   - Dry-run Angel order payload validation is in place.
+   - Live-mode order validation requires an explicit manual approval token.
+   - Add interactive manual approval prompts.
    - Add one-lot-only live pilot mode after long paper validation.
 
 ## Open-Source Repos To Study

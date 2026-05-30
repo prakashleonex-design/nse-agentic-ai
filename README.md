@@ -113,6 +113,20 @@ python -m nse_agentic_trader.app report --date 2026-05-30
 
 The trade reviewer records a structured verdict (`APPROVED`, `CAUTION`, or `REJECTED`), concerns, checklist items, and reward/risk into the journal.
 
+Validate an Angel order payload without placing it:
+
+```powershell
+python -m nse_agentic_trader.app order validate --trading-symbol NIFTY02JUN2622500CE --symboltoken 56978 --exchange NFO --side BUY --quantity 65 --lot-size 65 --stop-loss 90
+```
+
+Live-mode validation additionally requires an explicit manual approval token:
+
+```powershell
+python -m nse_agentic_trader.app order validate --trading-symbol NIFTY02JUN2622500CE --symboltoken 56978 --exchange NFO --side BUY --quantity 65 --lot-size 65 --stop-loss 90 --manual-approval APPROVE
+```
+
+This command only validates and prints the payload; it does not place an order.
+
 Run a specific strategy:
 
 ```powershell

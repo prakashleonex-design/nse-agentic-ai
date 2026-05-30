@@ -8,6 +8,7 @@ from nse_agentic_trader.agent import TradeReviewer
 from nse_agentic_trader.broker import PaperBroker
 from nse_agentic_trader.broker.angel import AngelSmartApiBroker
 from nse_agentic_trader.config import load_settings
+from nse_agentic_trader.execution import build_angel_order_params, validate_order_request
 from nse_agentic_trader.filters import AvoidTradeFilterEngine, apply_filter_block
 from nse_agentic_trader.instruments import AngelInstrumentMaster, OptionQuery, ensure_instrument_master, instrument_master_info
 from nse_agentic_trader.journal import Journal
@@ -349,6 +350,32 @@ def run_report(args) -> None:
         print(line)
 
 
+def validate_order(args) -> None:
+    settings = load_settings()
+    order = OrderRequest(
+        symbol=args.trading_symbol,
+        side=Side(args.side),
+        quantity=args.quantity,
+        order_type=args.order_type,
+        product_type=args.product_type,
+        price=args.price,
+        stop_loss=args.stop_loss,
+        target=args.target,
+        exchange=args.exchange,
+        symboltoken=args.symboltoken,
+        tick_size=args.tick_size,
+        lot_size=args.lot_size,
+    )
+    validation = validate_order_request(order, settings, args.manual_approval == "APPROVE")
+    print(f"Validation: {'APPROVED' if validation.approved else 'REJECTED'}")
+    if validation.reasons:
+        for reason in validation.reasons:
+            print(f"- {reason}")
+    print("Angel payload:")
+    for key, value in build_angel_order_params(order, settings).items():
+        print(f"{key}: {value}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="NSE agentic trader starter")
     subparsers = parser.add_subparsers(dest="command")
@@ -381,6 +408,23 @@ def main() -> None:
     report_parser = subparsers.add_parser("report", help="Summarize journal decisions and orders")
     report_parser.add_argument("--journal-path", type=Path)
     report_parser.add_argument("--date", type=lambda value: datetime.strptime(value, "%Y-%m-%d"))
+
+    order_parser = subparsers.add_parser("order", help="Order dry-run validation utilities")
+    order_subparsers = order_parser.add_subparsers(dest="order_command")
+    validate_order_parser = order_subparsers.add_parser("validate", help="Validate an Angel order payload without placing it")
+    validate_order_parser.add_argument("--trading-symbol", required=True)
+    validate_order_parser.add_argument("--symboltoken", required=True)
+    validate_order_parser.add_argument("--exchange", default="NFO")
+    validate_order_parser.add_argument("--side", choices=[item.value for item in Side], required=True)
+    validate_order_parser.add_argument("--quantity", type=int, required=True)
+    validate_order_parser.add_argument("--lot-size", type=int)
+    validate_order_parser.add_argument("--order-type", default="MARKET")
+    validate_order_parser.add_argument("--product-type", default="INTRADAY")
+    validate_order_parser.add_argument("--price", type=float)
+    validate_order_parser.add_argument("--stop-loss", type=float, required=True)
+    validate_order_parser.add_argument("--target", type=float)
+    validate_order_parser.add_argument("--tick-size", type=float, default=0.05)
+    validate_order_parser.add_argument("--manual-approval", default="", help="Pass APPROVE only for explicit live-mode approval")
 
     _add_run_args(parser)
     args = parser.parse_args()
@@ -419,6 +463,9 @@ def main() -> None:
         return
     if args.command == "report":
         run_report(args)
+        return
+    if args.command == "order" and args.order_command == "validate":
+        validate_order(args)
         return
     parser.print_help()
 
