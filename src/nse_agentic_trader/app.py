@@ -4,7 +4,7 @@ import argparse
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from nse_agentic_trader.agent import TradeReviewer
+from nse_agentic_trader.agent import MarketRegimeAgent, TradeReviewer
 from nse_agentic_trader.broker import PaperBroker
 from nse_agentic_trader.broker.angel import AngelSmartApiBroker
 from nse_agentic_trader.checklist import build_premarket_checklist, checklist_lines
@@ -418,6 +418,26 @@ def run_compare(args) -> None:
         print(f"Wrote strategy comparison report to {args.output}")
 
 
+def run_agent_regime(args) -> None:
+    bars = _load_bars(
+        load_settings(),
+        args.symbol,
+        args.data_source,
+        args.csv_path,
+        args.from_date,
+        args.to_date,
+        args.interval,
+        args.data_exchange,
+        args.data_token,
+        OptionType(args.data_option_type),
+        args.option_strike,
+        args.option_expiry,
+    )
+    result = MarketRegimeAgent(lookback=args.lookback).analyze(bars)
+    for line in result.lines():
+        print(line)
+
+
 def run_report(args) -> None:
     settings = load_settings()
     report = build_journal_report(args.journal_path or settings.journal_path, args.date.date() if args.date else None)
@@ -579,6 +599,12 @@ def main() -> None:
     postmarket_parser.add_argument("--date", type=lambda value: datetime.strptime(value, "%Y-%m-%d"))
     postmarket_parser.add_argument("--output", type=Path, help="Optional Markdown output path")
 
+    agents_parser = subparsers.add_parser("agents", help="Multi-agent assistant utilities")
+    agent_subparsers = agents_parser.add_subparsers(dest="agent_command")
+    regime_parser = agent_subparsers.add_parser("regime", help="Run the market-regime agent on candle data")
+    _add_run_args(regime_parser, include_strategy=False)
+    regime_parser.add_argument("--lookback", type=int, default=30)
+
     data_parser = subparsers.add_parser("data", help="Market-data utilities")
     data_subparsers = data_parser.add_subparsers(dest="data_command")
     validate_data_parser = data_subparsers.add_parser("validate", help="Validate candle data quality")
@@ -644,6 +670,9 @@ def main() -> None:
         return
     if args.command == "postmarket":
         run_postmarket(args)
+        return
+    if args.command == "agents" and args.agent_command == "regime":
+        run_agent_regime(args)
         return
     if args.command == "data" and args.data_command == "validate":
         validate_data(args)

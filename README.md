@@ -35,6 +35,18 @@ Each strategy must produce a structured trade idea: symbol, option contract when
 
 Option buying and breakout/momentum are the first practical implementation targets because risk is naturally capped to premium paid. Option selling is research and paper-only until margin checks, defined-risk spreads, emergency exits, and stricter live controls are implemented.
 
+## Multi-Agent Direction
+
+The system now has the first shared agent contract and a deterministic market-regime agent. Agents produce a structured verdict, confidence, reasons, concerns, and required checks. They advise, challenge, and veto; they do not place trades.
+
+Run the market-regime agent:
+
+```powershell
+python -m nse_agentic_trader.app agents regime --symbol NIFTY --data-source csv --csv-path .\data\nifty_1m.csv --lookback 30
+```
+
+Current agent verdicts are `SUPPORT`, `CAUTION`, `VETO`, and `INFO`.
+
 ## What This Is Not
 
 This is not a profitable trading system, a financial advisor, or a plug-and-play live bot. Use it as engineering infrastructure and test every strategy with historical data, paper trading, and tiny live size before risking real capital.
