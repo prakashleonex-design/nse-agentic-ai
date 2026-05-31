@@ -4,7 +4,7 @@ import argparse
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from nse_agentic_trader.agent import MarketRegimeAgent, TradeReviewer
+from nse_agentic_trader.agent import MarketRegimeAgent, StrategySelectorAgent, TradeReviewer
 from nse_agentic_trader.broker import PaperBroker
 from nse_agentic_trader.broker.angel import AngelSmartApiBroker
 from nse_agentic_trader.checklist import build_premarket_checklist, checklist_lines
@@ -419,6 +419,19 @@ def run_compare(args) -> None:
 
 
 def run_agent_regime(args) -> None:
+    result = _run_regime_agent(args)
+    for line in result.lines():
+        print(line)
+
+
+def run_agent_strategy_selector(args) -> None:
+    regime = _run_regime_agent(args)
+    selection = StrategySelectorAgent().select(regime)
+    for line in selection.lines():
+        print(line)
+
+
+def _run_regime_agent(args):
     bars = _load_bars(
         load_settings(),
         args.symbol,
@@ -433,9 +446,7 @@ def run_agent_regime(args) -> None:
         args.option_strike,
         args.option_expiry,
     )
-    result = MarketRegimeAgent(lookback=args.lookback).analyze(bars)
-    for line in result.lines():
-        print(line)
+    return MarketRegimeAgent(lookback=args.lookback).analyze(bars)
 
 
 def run_report(args) -> None:
@@ -604,6 +615,9 @@ def main() -> None:
     regime_parser = agent_subparsers.add_parser("regime", help="Run the market-regime agent on candle data")
     _add_run_args(regime_parser, include_strategy=False)
     regime_parser.add_argument("--lookback", type=int, default=30)
+    selector_parser = agent_subparsers.add_parser("select-strategy", help="Run regime and strategy-selector agents on candle data")
+    _add_run_args(selector_parser, include_strategy=False)
+    selector_parser.add_argument("--lookback", type=int, default=30)
 
     data_parser = subparsers.add_parser("data", help="Market-data utilities")
     data_subparsers = data_parser.add_subparsers(dest="data_command")
@@ -673,6 +687,9 @@ def main() -> None:
         return
     if args.command == "agents" and args.agent_command == "regime":
         run_agent_regime(args)
+        return
+    if args.command == "agents" and args.agent_command == "select-strategy":
+        run_agent_strategy_selector(args)
         return
     if args.command == "data" and args.data_command == "validate":
         validate_data(args)

@@ -45,6 +45,12 @@ Run the market-regime agent:
 python -m nse_agentic_trader.app agents regime --symbol NIFTY --data-source csv --csv-path .\data\nifty_1m.csv --lookback 30
 ```
 
+Run the strategy-selector agent after regime classification:
+
+```powershell
+python -m nse_agentic_trader.app agents select-strategy --symbol NIFTY --data-source csv --csv-path .\data\nifty_1m.csv --lookback 30
+```
+
 Current agent verdicts are `SUPPORT`, `CAUTION`, `VETO`, and `INFO`.
 
 ## What This Is Not
